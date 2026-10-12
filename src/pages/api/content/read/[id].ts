@@ -186,7 +186,7 @@ function convertToHtml(filePath: string, id: string, mtime: number): string | nu
     // pandoc >= 2.19 uses --embed-resources; older builds (e.g. 2.14)
     // only know --self-contained. Try the modern flag, then fall back.
     const baseArgs = [filePath, '-f', extToFormat(filePath), '-t', 'html', '--wrap=none'];
-    const opts = { maxBuffer: 128 * 1024 * 1024, encoding: 'utf8' };
+    const opts = { maxBuffer: 128 * 1024 * 1024, encoding: 'utf8' } as const;
     let html = '';
     let lastErr: unknown = null;
     for (const flag of ['--embed-resources', '--self-contained']) {

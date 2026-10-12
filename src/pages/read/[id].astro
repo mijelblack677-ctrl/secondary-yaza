@@ -27,11 +27,8 @@ import { icons } from '../../lib/icons';
     </main>
   </div>
 
-  <script is:inline>
-    const ICONS = ${JSON.stringify(icons)};
-    function icon(name) {
-      return ICONS[name] || '';
-    }
+  <script is:inline define:vars={{ icons }}>
+    const ICONS = icons;
 
     document.addEventListener('DOMContentLoaded', async () => {
       const urlParams = new URLSearchParams(window.location.search);

@@ -8,11 +8,12 @@ import { eq } from 'drizzle-orm';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const user = await getUserFromSession(extractBearerToken(request));
+    const sessionToken = extractBearerToken(request);
+    const user = await getUserFromSession(sessionToken);
 
     if (user) {
       // Delete the session
-      await db.delete(userSessions).where(eq(userSessions.token, extractBearerToken(request)!));
+      await db.delete(userSessions).where(eq(userSessions.token, sessionToken!));
     }
 
     return new Response(
