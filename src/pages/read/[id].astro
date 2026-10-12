@@ -49,7 +49,7 @@ import { icons } from '../../lib/icons';
         const token = document.cookie.match(/token=([^;]+)/)?.[1];
         const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const metaRes = await fetch(`/api/content/read/${bookId}?mode=meta`, {
+        const metaRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=meta', {
           headers: authHeaders
         });
 
@@ -63,13 +63,13 @@ import { icons } from '../../lib/icons';
         loading.style.display = 'none';
 
         const streamUrl = token
-          ? `/api/content/read/${bookId}?token=${encodeURIComponent(token)}`
-          : `/api/content/read/${bookId}`;
-        const downloadUrl = `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}download=1`;
+          ? '/api/content/read/' + encodeURIComponent(bookId) + '?token=' + encodeURIComponent(token)
+          : '/api/content/read/' + encodeURIComponent(bookId);
+        const downloadUrl = streamUrl + (streamUrl.indexOf('?') !== -1 ? '&' : '?') + 'download=1';
         const renderMode = metaData.renderMode || (metaData.textMode ? 'text' : 'download');
 
         if (renderMode === 'text') {
-          const textRes = await fetch(`/api/content/read/${bookId}?mode=text`, {
+          const textRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=text', {
             headers: authHeaders
           });
           const textData = await textRes.json();
@@ -80,7 +80,7 @@ import { icons } from '../../lib/icons';
             readerContent.innerHTML = emptyState('file', 'Unable to Display Content', 'This book format is not supported for text viewing.');
           }
         } else if (renderMode === 'html') {
-          const htmlRes = await fetch(`/api/content/read/${bookId}?mode=html`, {
+          const htmlRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=html', {
             headers: authHeaders
           });
           const htmlData = await htmlRes.json().catch(() => ({ success: false }));
@@ -91,30 +91,17 @@ import { icons } from '../../lib/icons';
             readerContent.innerHTML = renderDownload(metaData, downloadUrl);
           }
         } else if (renderMode === 'pdf') {
-          readerContent.innerHTML = `
-            <div class="reader-container">
-              ${readerHeader(metaData, downloadUrl)}
-              <iframe
-                class="reader-frame"
-                src="${streamUrl}"
-                title="${escapeHtml(metaData.title)}"
-              ></iframe>
-            </div>
-          `;
+          readerContent.innerHTML = '<div class="reader-container">' + readerHeader(metaData, downloadUrl) + '<iframe class="reader-frame" src="' + streamUrl + '" title="' + escapeHtml(metaData.title) + '"></iframe></div>';
         } else {
           readerContent.innerHTML = renderDownload(metaData, downloadUrl);
         }
 
         const nav = document.getElementById('reader-nav');
         if (nav) {
-          nav.innerHTML = `
-            <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 0.5rem;">
-              Format: ${escapeHtml(metaData.label)} | ${metaData.size ? (metaData.size / 1024 / 1024).toFixed(1) + ' MB' : 'Unknown'}
-            </p>
-          `;
+          nav.innerHTML = '<p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 0.5rem;">Format: ' + escapeHtml(metaData.label) + ' | ' + (metaData.size ? (metaData.size / 1024 / 1024).toFixed(1) + ' MB' : 'Unknown') + '</p>';
         }
 
-        document.title = `${metaData.title} | Secondary Yaza`;
+        document.title = metaData.title + ' | Secondary Yaza';
       } catch (error) {
         console.error('Reader error:', error);
         loading.style.display = 'none';
@@ -123,41 +110,16 @@ import { icons } from '../../lib/icons';
     });
 
     function emptyState(iconName, title, message) {
-      return `
-        <div class="empty-state">
-          <div class="icon">${icon(iconName)}</div>
-          <h3>${escapeHtml(title)}</h3>
-          <p>${escapeHtml(message)}</p>
-          <a href="/library" class="btn btn-primary" style="margin-top: 1rem;">Back to Library</a>
-        </div>
-      `;
+      return '<div class="empty-state"><div class="icon">' + icon(iconName) + '</div><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(message) + '</p><a href="/library" class="btn btn-primary" style="margin-top: 1rem;">Back to Library</a></div>';
     }
 
     function readerHeader(meta, downloadUrl) {
-      const size = meta.size ? `${(meta.size / 1024 / 1024).toFixed(1)} MB` : '';
-      return `
-        <div class="reader-header">
-          <h1 class="reader-title">${escapeHtml(meta.title)}</h1>
-          <p class="reader-author">by ${escapeHtml(meta.author || 'Unknown Author')}</p>
-          <div class="reader-toolbar">
-            <span class="reader-meta">${escapeHtml(meta.label)}${size ? ` · ${size}` : ''}</span>
-            <a class="btn" href="${downloadUrl}" download>
-              ${icon('download')} Download for offline
-            </a>
-          </div>
-        </div>
-      `;
+      const size = meta.size ? (meta.size / 1024 / 1024).toFixed(1) + ' MB' : '';
+      return '<div class="reader-header"><h1 class="reader-title">' + escapeHtml(meta.title) + '</h1><p class="reader-author">by ' + escapeHtml(meta.author || 'Unknown Author') + '</p><div class="reader-toolbar"><span class="reader-meta">' + escapeHtml(meta.label) + (size ? ' · ' + size : '') + '</span><a class="btn" href="' + downloadUrl + '" download>' + icon('download') + ' Download for offline</a></div></div>';
     }
 
     function renderDownload(meta, downloadUrl) {
-      return `
-        <div class="reader-container">
-          ${readerHeader(meta, downloadUrl)}
-          <div class="reader-content-block">
-            <p>This title is a <strong>${escapeHtml(meta.label)}</strong> file, which can't be previewed in the browser. Download it to read offline with your device's document viewer.</p>
-          </div>
-        </div>
-      `;
+      return '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-content-block"><p>This title is a <strong>' + escapeHtml(meta.label) + '</strong> file, which can\'t be previewed in the browser. Download it to read offline with your device\'s document viewer.</p></div></div>';
     }
 
     function renderHtmlContent(html, meta, downloadUrl) {
@@ -166,14 +128,9 @@ import { icons } from '../../lib/icons';
 
       loading.style.display = 'none';
 
-      container.innerHTML = `
-        <div class="reader-container">
-          ${readerHeader(meta, downloadUrl)}
-          <div class="reader-article">${html}</div>
-        </div>
-      `;
+      container.innerHTML = '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-article">' + html + '</div></div>';
 
-      document.title = `${meta.title} | Secondary Yaza`;
+      document.title = meta.title + ' | Secondary Yaza';
     }
 
     async function renderTextContent(blocks, meta, downloadUrl) {
@@ -182,35 +139,28 @@ import { icons } from '../../lib/icons';
 
       loading.style.display = 'none';
 
-      const html = blocks.map(block => {
+      const html = blocks.map(function(block) {
         switch (block.type) {
           case 'h1':
-            return `<h1>${escapeHtml(block.text)}</h1>`;
+            return '<h1>' + escapeHtml(block.text) + '</h1>';
           case 'h2':
-            return `<h2>${escapeHtml(block.text)}</h2>`;
+            return '<h2>' + escapeHtml(block.text) + '</h2>';
           case 'h3':
-            return `<h3>${escapeHtml(block.text)}</h3>`;
+            return '<h3>' + escapeHtml(block.text) + '</h3>';
           case 'quote':
-            return `<blockquote>${escapeHtml(block.text)}</blockquote>`;
+            return '<blockquote>' + escapeHtml(block.text) + '</blockquote>';
           case 'li':
-            return `<li>${escapeHtml(block.text)}</li>`;
+            return '<li>' + escapeHtml(block.text) + '</li>';
           case 'break':
             return '<br/>';
           default:
-            return `<p>${escapeHtml(block.text)}</p>`;
+            return '<p>' + escapeHtml(block.text) + '</p>';
         }
       }).join('');
 
-      container.innerHTML = `
-        <div class="reader-container">
-          ${readerHeader(meta, downloadUrl)}
-          <div class="reader-content-block">
-            ${html}
-          </div>
-        </div>
-      `;
+      container.innerHTML = '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-content-block">' + html + '</div></div>';
 
-      document.title = `${meta.title} | Secondary Yaza`;
+      document.title = meta.title + ' | Secondary Yaza';
     }
 
     function escapeHtml(str) {
