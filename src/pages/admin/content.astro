@@ -123,11 +123,11 @@ import { icons } from '../../lib/icons';
 
     document.addEventListener('DOMContentLoaded', async () => {
       const token = document.cookie.match(/adminToken=([^;]+)/)?.[1];
-      const loading = document.getElementById('loading');
-      const table = document.getElementById('content-table');
+      const loading = document.getElementById<HTMLDivElement>('loading');
+      const table = document.getElementById<HTMLTableElement>('content-table');
       const tbody = document.getElementById('content-body');
-      const emptyState = document.getElementById('empty-state');
-      const filterType = document.getElementById('filter-type');
+      const emptyState = document.getElementById<HTMLDivElement>('empty-state');
+      const filterType = document.getElementById<HTMLSelectElement>('filter-type');
       const coverInput = document.getElementById('cover-input');
       let coverTargetId = null;
 
@@ -267,10 +267,10 @@ import { icons } from '../../lib/icons';
         });
       }
 
-      function showError(message) {
+      function showError(message: string) {
         loading.style.display = 'none';
         emptyState.style.display = 'block';
-        emptyState.querySelector('div:last-child').textContent = message;
+        emptyState.querySelector('div:last-child')!.textContent = message;
       }
 
       coverInput.addEventListener('change', async () => {

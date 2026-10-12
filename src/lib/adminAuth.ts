@@ -45,14 +45,14 @@ export async function requireAdmin(request: Request): Promise<AdminUser | null> 
       .from(adminSessions)
       .where(eq(adminSessions.token, token));
     
-    if (!expiresAt.length || expiresAt[0].expiresAt < new Date()) {
+    if (!expiresAt.length || expiresAt[0]!.expiresAt < new Date()) {
       return null;
     }
 
     return {
       id: row.id,
       username: row.username,
-      email: row.email,
+      email: row.email ?? '',
       role: row.role,
     };
   } catch (error) {

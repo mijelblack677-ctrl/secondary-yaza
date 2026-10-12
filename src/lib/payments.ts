@@ -25,8 +25,8 @@ import { awardInviterRegistrationBonus, awardInviterPurchaseBonus } from './purc
 
 // Overridable so staging/tests can point at a mock gateway.
 const PAYCHANGU_API = process.env.PAYCHANGU_API_BASE || 'https://api.paychangu.com';
-// Use wisdom-vault PayChangu key if not set in env
-const SECRET_KEY = process.env.PAYCHANGU_SECRET_KEY || 'sec-live-v7GLEOtVg6VPXdNcMwld27gRU3Hknmt0';
+// Never hardcode gateway credentials; they must come from the environment.
+const SECRET_KEY = process.env.PAYCHANGU_SECRET_KEY || '';
 
 if (!SECRET_KEY) {
   console.warn('PAYCHANGU_SECRET_KEY not set - payment verification will fail');

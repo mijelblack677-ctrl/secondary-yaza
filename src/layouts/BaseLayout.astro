@@ -9,6 +9,7 @@ import '../styles/library.css';
 ---
 
 <script is:inline>
+  /** @type {any} */
   const _u = window._yb_url || (window._yb_url = {});
   _u['/'] = 'Home';
   _u['/library'] = 'Library';
@@ -101,14 +102,14 @@ import '../styles/library.css';
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const toggle = document.querySelector('.menu-toggle');
-      const panel = document.getElementById('site-nav-panel');
-      const overlay = document.getElementById('site-overlay');
-      const backdrop = document.getElementById('site-backdrop');
+      const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
+      const panel = document.getElementById<HTMLDivElement>('site-nav-panel');
+      const overlay = document.getElementById<HTMLDivElement>('site-overlay');
+      const backdrop = document.getElementById<HTMLDivElement>('site-backdrop');
 
       if (!toggle || !panel) return;
 
-      const setOpen = (open) => {
+      const setOpen = (open: boolean) => {
         panel.classList.toggle('open', open);
         panel.setAttribute('aria-hidden', String(!open));
         overlay?.classList.toggle('show', open);
@@ -118,7 +119,7 @@ import '../styles/library.css';
       };
 
       toggle.addEventListener('click', (event) => {
-        event.stopPropagation();
+        event?.stopPropagation();
         setOpen(!panel.classList.contains('open'));
       });
 

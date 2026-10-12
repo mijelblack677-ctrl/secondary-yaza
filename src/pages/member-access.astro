@@ -30,7 +30,7 @@ const { title, description = 'Member Access — read the membership collection' 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
         <div class="book-card" style="flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden;">
           <div class="book-cover" style="position: relative; aspect-ratio: 3/4; background: linear-gradient(160deg, var(--accent) 0%, var(--surface-2) 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-            <span class="book-cover-icon" style="font-size: 2.25rem; opacity: 0.75;">${icon('card')}</span>
+            <span class="book-cover-icon" style="font-size: 2.25rem; opacity: 0.75;" set:html={icons.card}></span>
           </div>
           <div class="book-info" style="padding: 1rem 1.1rem 1.25rem; display: flex; flex-direction: column; flex: 1;">
             <h3 style="font-size: 1.15rem; margin-bottom: 0.25rem;">Membership</h3>
@@ -84,7 +84,8 @@ const { title, description = 'Member Access — read the membership collection' 
     </div>
   </section>
 
-  <script is:inline>
+  <script is:inline define:vars={{ icons }}>
+    const ICONS = icons;
     (async () => {
       const token = document.cookie.match(/token=([^;]+)/)?.[1];
       const loading = document.getElementById('loading');
@@ -100,7 +101,7 @@ const { title, description = 'Member Access — read the membership collection' 
       if (!token) {
         memberPanel.innerHTML = `
           <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; border: 1px solid var(--line);">
-            <div style="font-size: 2.5rem; margin-bottom: 1rem;">${icon('lock')}</div>
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">${ICONS.lock}</div>
             <h2 style="margin-bottom: 0.5rem; font-family: var(--font-serif-display); font-weight: 300;">Please sign in</h2>
             <p style="color: var(--ink-60); font-size: 0.9375rem; margin-bottom: 1rem;">Sign in to view your membership and referral earnings.</p>
             <a href="/login" class="btn-gold">Sign In</a>
@@ -119,7 +120,7 @@ const { title, description = 'Member Access — read the membership collection' 
         if (!data.success) {
           memberPanel.innerHTML = `
             <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; border: 1px solid var(--line);">
-              <div style="font-size: 2.5rem; margin-bottom: 1rem;">${icon('alert')}</div>
+              <div style="font-size: 2.5rem; margin-bottom: 1rem;">${ICONS.alert}</div>
               <h2 style="margin-bottom: 0.5rem; font-family: var(--font-serif-display); font-weight: 300;">Unable to load account</h2>
               <p style="color: var(--ink-60); font-size: 0.9375rem; margin-bottom: 1rem;">${escapeHtml(data.message || 'Please try again.')}</p>
               <a href="/logout" class="btn-gold">Sign out</a>
@@ -233,7 +234,7 @@ const { title, description = 'Member Access — read the membership collection' 
         loading.style.display = 'none';
         memberPanel.innerHTML = `
           <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; border: 1px solid var(--line);">
-            <div style="font-size: 2.5rem; margin-bottom: 1rem;">${icon('alert')}</div>
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">${ICONS.alert}</div>
             <h2 style="margin-bottom: 0.5rem; font-family: var(--font-serif-display); font-weight: 300;">Something went wrong</h2>
             <p style="color: var(--ink-60); font-size: 0.9375rem; margin-bottom: 1rem;">Please refresh the page and try again.</p>
             <a href="/library" class="btn-gold">Back to Library</a>

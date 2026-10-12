@@ -48,12 +48,12 @@ import { icons } from '../lib/icons';
     import { icon } from '../lib/icons';
 
     document.addEventListener('DOMContentLoaded', async () => {
-      const grid = document.getElementById('library-grid');
-      const loading = document.getElementById('loading');
-      const emptyState = document.getElementById('empty-state');
-      const categoryFilter = document.getElementById('category-filter');
-      const typeFilter = document.getElementById('type-filter');
-      const subscribeMsg = document.getElementById('subscribe-msg');
+      const grid = document.getElementById<HTMLDivElement>('library-grid');
+      const loading = document.getElementById<HTMLDivElement>('loading');
+      const emptyState = document.getElementById<HTMLDivElement>('empty-state');
+      const categoryFilter = document.getElementById<HTMLSelectElement>('category-filter');
+      const typeFilter = document.getElementById<HTMLSelectElement>('type-filter');
+      const subscribeMsg = document.getElementById<HTMLDivElement>('subscribe-msg');
 
       const token = document.cookie.match(/token=([^;]+)/)?.[1];
 
@@ -164,27 +164,27 @@ import { icons } from '../lib/icons';
         return icon(map[type] || 'file');
       }
 
-      function escapeHtml(str) {
+      function escapeHtml(str: string) {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
       }
 
-      function showError(message) {
+      function showError(message: string) {
         grid.style.display = 'none';
         emptyState.style.display = 'block';
-        emptyState.querySelector('h3').textContent = 'Error loading library';
-        emptyState.querySelector('p').textContent = message;
+        emptyState.querySelector('h3')!.textContent = 'Error loading library';
+        emptyState.querySelector('p')!.textContent = message;
       }
 
       categoryFilter.addEventListener('change', fetchLibrary);
       typeFilter.addEventListener('change', fetchLibrary);
 
-      grid.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.purchase-btn');
+      grid.addEventListener('click', async (e: MouseEvent) => {
+        const btn = (e.target as HTMLElement).closest('.purchase-btn');
         if (!btn) return;
 
-        const card = btn.closest('.book-card');
+        const card = btn.closest('.book-card')!;
         const contentId = card.dataset.id;
         const priceText = card.querySelector('.book-price')?.textContent || '0';
         const priceNum = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
