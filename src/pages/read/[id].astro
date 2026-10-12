@@ -30,6 +30,11 @@ import { icons } from '../../lib/icons';
   <script is:inline define:vars={{ icons }}>
     const ICONS = icons;
 
+    // Client-side icon lookup with safe fallback (fixes "icon is not defined")
+    function icon(name) {
+      return ICONS[name] || ICONS.file || '';
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const bookId = urlParams.get('id') || document.location.pathname.split('/').pop();
