@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { hashPassword, generateReferralCode, validatePasswordStrength } from '@lib/password';
 import { buildSessionCookie } from '@lib/auth';
 import { startCheckout, autoVerifyPendingPayments, SUBSCRIPTION_MWK } from '@lib/payments';
+import { rateLimit, clientIp, tooManyRequests } from '@lib/rateLimit';
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -26,6 +27,10 @@ function json(body: unknown, status = 200): Response {
  */
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // Registration creates a PayChangu checkout each time, so cap the rate.
+    const ipLimit = rateLimit(`register:ip:${clientIp(request)}`, 20, 60 * 60 * 1000);
+    if (!ipLimit.allowed) return tooManyRequests(ipLimit.retryAfterSeconds);
+
     const body = await request.json();
     const { fullName, email, phone, password, policiesAcceptedAt, referralCode } = body;
 

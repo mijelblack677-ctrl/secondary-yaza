@@ -78,6 +78,33 @@ import BaseLayoutNoHeader from '../layouts/BaseLayoutNoHeader.astro';
     const registerForm = document.getElementById('register-form');
     const policiesCheck = document.getElementById('policies-check');
     const formError = document.getElementById('form-error');
+    const referralField = document.getElementById('referralCode');
+
+    // An invite link looks like /register?ref=ABC12345. When one is present the
+    // code is filled in and locked, so the invited person cannot accidentally
+    // change who referred them (the referrer still earns their bonus).
+    const params = new URLSearchParams(window.location.search);
+    const refFromLink = (params.get('ref') || params.get('code') || '').trim().toUpperCase();
+
+    if (referralField && refFromLink) {
+      referralField.value = refFromLink;
+      referralField.readOnly = true;
+      referralField.setAttribute('aria-readonly', 'true');
+      referralField.style.background = 'var(--surface-2)';
+      referralField.style.color = 'var(--ink-60)';
+      referralField.style.cursor = 'not-allowed';
+
+      const refLabel = document.querySelector('label[for="referralCode"]');
+      if (refLabel) refLabel.textContent = 'Referral code (from your invite link)';
+
+      if (!document.getElementById('referral-locked-note')) {
+        const note = document.createElement('div');
+        note.id = 'referral-locked-note';
+        note.className = 'auth-hint';
+        note.textContent = 'This code came from the person who invited you and cannot be changed.';
+        referralField.insertAdjacentElement('afterend', note);
+      }
+    }
 
     if (registerForm) {
       registerForm.addEventListener('submit', async (e) => {

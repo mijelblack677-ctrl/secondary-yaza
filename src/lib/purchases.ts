@@ -1,6 +1,6 @@
 import { db } from './db';
 import { wallets, userContentPurchases, transactions, notifications, referralClaims } from './db/schema';
-import { eq, and, isNotNull } from 'drizzle-orm';
+import { eq, and, isNotNull, sql } from 'drizzle-orm';
 
 export interface PurchaseResult {
   success: boolean;
@@ -158,45 +158,24 @@ export async function processContentPurchase(
   contentTitle: string
 ): Promise<PurchaseResult> {
   try {
-    // Get user's wallet
-    const walletResult = await db
-      .select()
-      .from(wallets)
-      .where(eq(wallets.userId, userId));
+    // Debit the wallet with a single conditional UPDATE: the balance check and
+    // the subtraction happen together, so two concurrent purchases can never
+    // both pass a stale check and take the wallet below zero.
+    const outcome = await db.transaction(async (tx: typeof db) => {
+      const debited = await tx.execute(sql`
+        UPDATE wallets
+        SET balance = balance - ${price}, updated_at = now()
+        WHERE user_id = ${userId} AND balance >= ${price}
+        RETURNING id, balance + ${price} AS balance_before, balance AS balance_after
+      `);
 
-    if (walletResult.length === 0) {
-      return {
-        success: false,
-        message: 'Wallet not found',
-        error: 'WALLET_NOT_FOUND',
-      };
-    }
+      const rows = normalizeRows(debited);
+      if (rows.length === 0) return { ok: false as const };
 
-    const wallet = walletResult[0];
-    const currentBalance = parseFloat(wallet.balance?.toString() || '0');
+      const row = rows[0];
 
-    if (currentBalance < price) {
-      return {
-        success: false,
-        message: `Insufficient balance. You need MWK ${price.toLocaleString()} but have MWK ${currentBalance.toLocaleString()}`,
-        error: 'INSUFFICIENT_BALANCE',
-      };
-    }
-
-    const newBalance = currentBalance - price;
-
-    // Perform the transaction
-    await db.transaction(async (tx: typeof db) => {
-      // Update wallet balance
-      await tx
-        .update(wallets)
-        .set({
-          balance: newBalance.toString(),
-          updatedAt: new Date(),
-        })
-        .where(eq(wallets.id, wallet.id));
-
-      // Record the purchase
+      // Record the purchase. The unique (user_id, content_id) constraint makes a
+      // duplicate purchase fail here and roll the whole debit back.
       await tx
         .insert(userContentPurchases)
         .values({
@@ -209,23 +188,48 @@ export async function processContentPurchase(
       await tx
         .insert(transactions)
         .values({
-          walletId: wallet.id,
+          walletId: String(row.id),
           userId,
           transactionType: 'content_purchase',
           amount: price.toString(),
-          balanceBefore: currentBalance.toString(),
-          balanceAfter: newBalance.toString(),
+          balanceBefore: String(row.balance_before),
+          balanceAfter: String(row.balance_after),
           description: `Book Purchase: ${contentTitle}`,
         });
 
       // Award the inviter when the buyer was referred (500 per book).
       await awardInviterPurchaseBonus(tx, userId, contentTitle);
+
+      return { ok: true as const, newBalance: Number(row.balance_after) };
     });
+
+    if (!outcome.ok) {
+      const walletResult = await db
+        .select({ balance: wallets.balance })
+        .from(wallets)
+        .where(eq(wallets.userId, userId))
+        .limit(1);
+
+      if (walletResult.length === 0) {
+        return {
+          success: false,
+          message: 'Wallet not found',
+          error: 'WALLET_NOT_FOUND',
+        };
+      }
+
+      const currentBalance = parseFloat(walletResult[0].balance?.toString() || '0');
+      return {
+        success: false,
+        message: `Insufficient balance. You need MWK ${price.toLocaleString()} but have MWK ${currentBalance.toLocaleString()}`,
+        error: 'INSUFFICIENT_BALANCE',
+      };
+    }
 
     return {
       success: true,
       message: `Book purchased! MWK ${price.toLocaleString()} deducted.`,
-      newBalance,
+      newBalance: outcome.newBalance,
     };
   } catch (error) {
     console.error('Purchase error:', error);
@@ -235,6 +239,13 @@ export async function processContentPurchase(
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
+}
+
+/** postgres-js returns a row list; normalise it to a plain array. */
+function normalizeRows(result: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(result)) return result as Array<Record<string, unknown>>;
+  const maybe = result as { rows?: Array<Record<string, unknown>> } | null;
+  return maybe?.rows ?? [];
 }
 
 /** Check if user owns a content item. */

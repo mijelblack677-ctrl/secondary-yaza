@@ -6,11 +6,21 @@ import { adminUsers, adminSessions } from '@lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifyPassword, hashPassword } from '@lib/password';
 import { generateAdminToken, buildAdminCookie } from '@lib/adminAuth';
+import { rateLimit, clientIp, tooManyRequests } from '@lib/rateLimit';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // The admin panel is the highest-value target on the site: throttle hard.
+    const ipLimit = rateLimit(`admin-login:ip:${clientIp(request)}`, 10, 15 * 60 * 1000);
+    if (!ipLimit.allowed) return tooManyRequests(ipLimit.retryAfterSeconds);
+
     const body = await request.json();
     const { username, password } = body;
+
+    if (username) {
+      const accountLimit = rateLimit(`admin-login:user:${String(username).toLowerCase()}`, 10, 15 * 60 * 1000);
+      if (!accountLimit.allowed) return tooManyRequests(accountLimit.retryAfterSeconds);
+    }
 
     if (!username || !password) {
       return new Response(

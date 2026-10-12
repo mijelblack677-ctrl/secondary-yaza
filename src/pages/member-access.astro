@@ -54,6 +54,18 @@ const { title, description = 'Member Access — read the membership collection' 
             <p id="referral-count" style="font-family: var(--font-display); font-weight: 300; font-size: 2rem; line-height: 1; margin-bottom: 0.25rem;">0</p>
             <p style="font-size: 12px; color: var(--ink-40);">People who registered using your code.</p>
           </div>
+
+          <div style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 1.25rem;">
+            <p style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-30); margin-bottom: 0.6rem;">Your referral link</p>
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.6rem;">
+              <code id="referral-code" style="font-family: monospace; font-size: 15px; font-weight: 600; letter-spacing: 0.08em; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.45rem 0.7rem; flex: 1; text-align: center; overflow-x: auto; white-space: nowrap;">—</code>
+              <button type="button" id="referral-code-copy" class="btn-gold" style="font-size: 12px; padding: 0.45rem 0.8rem; white-space: nowrap;">Copy code</button>
+            </div>
+            <input type="text" id="referral-link" readonly value="" aria-label="Your referral invite link" style="width: 100%; box-sizing: border-box; font-family: var(--font-sans); font-size: 12.5px; color: var(--ink-60); background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.5rem 0.6rem; margin-bottom: 0.5rem;" />
+            <button type="button" id="referral-link-copy" class="btn-gold" style="font-size: 12px; padding: 0.45rem 0.8rem; width: 100%;">Copy invite link</button>
+            <p id="referral-copy-status" style="font-size: 12px; color: var(--success); margin-top: 0.5rem; display: none;"></p>
+            <p style="font-size: 12px; color: var(--ink-40); margin-top: 0.5rem;">Share this link — when your friend opens it, your code is filled in for them automatically.</p>
+          </div>
         </div>
       </div>
 
@@ -122,6 +134,56 @@ const { title, description = 'Member Access — read the membership collection' 
         memberStatus.className = 'book-status ' + (activeMember ? 'owned' : 'available');
         referralBalance.textContent = 'MWK ' + (parseFloat(user.walletBalance || '0') || 0).toLocaleString();
         referralCount.textContent = user.referralCount ?? 0;
+
+        // Referral sharing: surface the member's own code and a ready-made
+        // invite link (/register?ref=CODE) they can send to a friend.
+        const codeEl = document.getElementById('referral-code');
+        const linkEl = document.getElementById('referral-link');
+        const codeCopyBtn = document.getElementById('referral-code-copy');
+        const linkCopyBtn = document.getElementById('referral-link-copy');
+        const copyStatus = document.getElementById('referral-copy-status');
+        const refCode = String(user.referralCode || '').trim();
+
+        if (refCode) {
+          const inviteUrl = new URL('/register', window.location.origin);
+          inviteUrl.searchParams.set('ref', refCode);
+          if (codeEl) codeEl.textContent = refCode;
+          if (linkEl) linkEl.value = inviteUrl.toString();
+        } else if (codeEl) {
+          codeEl.textContent = 'Not available';
+        }
+
+        async function copyText(text, label) {
+          if (!text) return;
+          try {
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(text);
+            } else {
+              // Fallback for non-secure contexts.
+              const ta = document.createElement('textarea');
+              ta.value = text;
+              ta.style.position = 'fixed';
+              ta.style.opacity = '0';
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              document.body.removeChild(ta);
+            }
+            if (copyStatus) {
+              copyStatus.textContent = label + ' copied';
+              copyStatus.style.display = 'block';
+              setTimeout(() => { copyStatus.style.display = 'none'; }, 2000);
+            }
+          } catch (err) {
+            if (copyStatus) {
+              copyStatus.textContent = 'Could not copy — please select and copy manually.';
+              copyStatus.style.display = 'block';
+            }
+          }
+        }
+
+        if (codeCopyBtn) codeCopyBtn.addEventListener('click', () => copyText(refCode, 'Referral code'));
+        if (linkCopyBtn) linkCopyBtn.addEventListener('click', () => copyText(linkEl ? linkEl.value : '', 'Invite link'));
 
         if (activeMember) {
           const now = new Date();

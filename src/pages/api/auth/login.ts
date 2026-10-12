@@ -6,11 +6,21 @@ import { users, userSessions } from '@lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifyPassword } from '@lib/password';
 import { generateToken, buildSessionCookie } from '@lib/auth';
+import { rateLimit, clientIp, tooManyRequests } from '@lib/rateLimit';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // Throttle credential stuffing — per IP, and per targeted account.
+    const ipLimit = rateLimit(`login:ip:${clientIp(request)}`, 20, 15 * 60 * 1000);
+    if (!ipLimit.allowed) return tooManyRequests(ipLimit.retryAfterSeconds);
+
     const body = await request.json();
     const { email, password } = body;
+
+    if (email) {
+      const accountLimit = rateLimit(`login:account:${String(email).toLowerCase()}`, 10, 15 * 60 * 1000);
+      if (!accountLimit.allowed) return tooManyRequests(accountLimit.retryAfterSeconds);
+    }
 
     if (!email || !password) {
       return new Response(
