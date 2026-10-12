@@ -73,7 +73,16 @@ export const GET: APIRoute = async ({ params, request, url }) => {
         ));
 
       if (owned.length === 0) {
-        return json({ success: false, message: 'Purchase required to read this book' }, 403);
+        // Include what the paywall needs, so an unowned premium book opens a
+        // PayChangu checkout instead of a dead end.
+        return json({
+          success: false,
+          message: 'Purchase required to read this book',
+          requiresPurchase: true,
+          contentId: item.id,
+          title: item.title,
+          price: item.price,
+        }, 403);
       }
     }
 

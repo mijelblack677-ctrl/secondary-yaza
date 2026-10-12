@@ -85,6 +85,9 @@ export const GET: APIRoute = async ({ request }) => {
       JSON.stringify({
         success: true,
         isAuthenticated: true,
+        // The library page gates the Purchase button and the download link on
+        // this flag; without it every premium card fell back to the login link.
+        isSubscribed: Boolean(authUser.isSubscribed),
         items: itemsWithAccess,
         categories,
         totalItems: items.length,

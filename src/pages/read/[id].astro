@@ -59,6 +59,12 @@ import { icons } from '../../lib/icons';
         const metaData = await metaRes.json().catch(() => ({ success: false, message: 'Unreadable response from server' }));
 
         if (!metaData.success) {
+          // Premium book the reader has not paid for — offer the paywall here
+          // too, so landing on this page directly is not a dead end.
+          if (metaData.requiresPurchase) {
+            renderPaywall(metaData);
+            return;
+          }
           readerContent.innerHTML = emptyState('alert', metaData.message || 'Error', 'Unable to load this book.');
           return;
         }
@@ -109,6 +115,59 @@ import { icons } from '../../lib/icons';
         readerContent.innerHTML = emptyState('alert', 'Error Loading Book', 'Something went wrong. Please try again.');
       }
     });
+
+    function renderPaywall(meta) {
+      const container = document.getElementById('reader-content');
+      const loading = document.getElementById('loading');
+      if (loading) loading.style.display = 'none';
+
+      const price = parseFloat(meta.price || '0') || 0;
+      const priceText = 'MWK ' + price.toLocaleString();
+
+      container.innerHTML = '<div class="reader-container"><div class="reader-content-block" style="text-align:center; padding: 2.5rem 1.5rem;">'
+        + '<div class="icon">' + icon('lock') + '</div>'
+        + '<h1 style="margin-bottom: .5rem;">' + escapeHtml(meta.title || 'Premium book') + '</h1>'
+        + '<p style="max-width: 46ch; margin: 0 auto 1rem;">This is a premium title. Pay ' + escapeHtml(priceText) + ' to unlock it on your account. Payment is processed securely by PayChangu.</p>'
+        + '<button type="button" id="paywall-buy" class="btn btn-primary">Pay ' + escapeHtml(priceText) + '</button>'
+        + '<p id="paywall-msg" style="margin-top: .75rem; font-size: 13px;"></p>'
+        + '<p style="margin-top: .5rem;"><a href="/library" class="reader-sidebar-link" style="color: var(--ink-60);">Back to Library</a></p>'
+        + '</div></div>';
+
+      const btn = document.getElementById('paywall-buy');
+      const msg = document.getElementById('paywall-msg');
+
+      btn.addEventListener('click', async function () {
+        btn.disabled = true;
+        btn.textContent = 'Starting payment\u2026';
+        if (msg) msg.textContent = '';
+
+        try {
+          const res = await fetch('/api/content/purchase', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contentId: meta.contentId })
+          });
+          const data = await res.json();
+
+          // Wallet could not cover it — hand the browser to PayChangu.
+          if (data.requiresPayment && data.checkoutUrl) {
+            window.location.href = data.checkoutUrl;
+            return;
+          }
+          if (data.success) {
+            window.location.reload();
+            return;
+          }
+          if (msg) msg.textContent = data.message || 'Could not start the payment. Please try again.';
+        } catch (err) {
+          if (msg) msg.textContent = 'Network error. Please try again.';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Pay ' + priceText;
+        }
+      });
+    }
 
     function emptyState(iconName, title, message) {
       return '<div class="empty-state"><div class="icon">' + icon(iconName) + '</div><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(message) + '</p><a href="/library" class="btn btn-primary" style="margin-top: 1rem;">Back to Library</a></div>';
