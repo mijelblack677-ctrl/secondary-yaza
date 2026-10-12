@@ -170,7 +170,7 @@ import BaseLayout from '../../layouts/BaseLayoutNoHeader.astro';
     import { icon } from '../../lib/icons';
 
     document.addEventListener('DOMContentLoaded', async () => {
-      const token = document.cookie.match(/adminToken=([^;]+)/)?.[1];
+      // Admin auth is carried by the HttpOnly cookie (credentials: 'same-origin').
       const categorySelect = document.getElementById('category');
       const form = document.getElementById('upload-form');
       const errorEl = document.getElementById('form-error');
@@ -180,21 +180,10 @@ import BaseLayout from '../../layouts/BaseLayoutNoHeader.astro';
       const coverPreviewImg = coverPreview?.querySelector('img');
       const coverClear = document.getElementById('cover-clear');
 
-      if (!token) {
-        document.querySelector('.admin-main').innerHTML = `
-          <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; border: 1px solid var(--line);">
-            <div style="font-size: 2.5rem; margin-bottom: 1rem;">${icon('lock')}</div>
-            <h2 style="margin-bottom: 0.5rem; font-family: var(--font-serif-display); font-weight: 300;">Admin Access Required</h2>
-            <p style="color: var(--ink-60); font-size: 0.9375rem; margin-bottom: 1rem;">Please log in to access the admin panel.</p>
-            <a href="/admin/login" class="admin-btn">Admin Login</a>
-          </div>
-        `;
-        return;
-      }
 
       try {
         const res = await fetch('/api/admin/content?type=categories', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'same-origin'
         });
         const data = await res.json();
 
@@ -296,7 +285,7 @@ import BaseLayout from '../../layouts/BaseLayoutNoHeader.astro';
         try {
           const res = await fetch('/api/admin/upload', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'same-origin',
             body: formData
           });
 

@@ -5,7 +5,7 @@ import { db } from '@lib/db';
 import { adminUsers, adminSessions } from '@lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifyPassword, hashPassword } from '@lib/password';
-import { generateAdminToken } from '@lib/adminAuth';
+import { generateAdminToken, buildAdminCookie } from '@lib/adminAuth';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -77,9 +77,16 @@ export const POST: APIRoute = async ({ request }) => {
           email: admin.email,
           role: admin.role,
         },
-        token,
+        // Token is NOT returned in the body — it is delivered only via the
+        // HttpOnly cookie below so XSS cannot steal the admin session.
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Set-Cookie': buildAdminCookie(token),
+        },
+      }
     );
   } catch (error) {
     console.error('Admin login error:', error);

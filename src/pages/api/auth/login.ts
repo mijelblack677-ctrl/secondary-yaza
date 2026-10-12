@@ -5,7 +5,7 @@ import { db } from '@lib/db';
 import { users, userSessions } from '@lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifyPassword } from '@lib/password';
-import { generateToken } from '@lib/auth';
+import { generateToken, buildSessionCookie } from '@lib/auth';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -67,6 +67,7 @@ export const POST: APIRoute = async ({ request }) => {
       expiresAt,
     });
 
+    // HttpOnly keeps the session token out of reach of any XSS on the site.
     return new Response(
       JSON.stringify({
         success: true,
@@ -77,9 +78,14 @@ export const POST: APIRoute = async ({ request }) => {
           email: user.email,
           isAdmin: user.isAdmin,
         },
-        token,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Set-Cookie': buildSessionCookie(token, expiresAt),
+        },
+      }
     );
   } catch (error) {
     console.error('Login error:', error);

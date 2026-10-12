@@ -23,11 +23,19 @@ export const GET: APIRoute = async ({ params, request, url }) => {
       return json({ success: false, message: 'Missing book ID' }, 400);
     }
 
-    // Auth via Authorization header, or `?token=` for contexts that cannot set
-    // headers (e.g. an <iframe> / download link).
+    const mode = url.searchParams.get('mode');
+
+    // Auth via the HttpOnly session cookie (or Authorization header). The
+    // `?token=` fallback is only honoured when streaming a PDF body (no mode)
+    // — an <iframe>/<a download> cannot send headers. It is NOT accepted for
+    // meta/text/html modes, and those responses set Referrer-Policy: no-referrer
+    // so the book URL (with its token) never leaks to third parties.
+    const wantsStream = !mode;
     const authUser =
       (await getAuthUser(request)) ||
-      (await getUserFromSession(url.searchParams.get('token') || undefined));
+      (wantsStream
+        ? await getUserFromSession(url.searchParams.get('token') || undefined)
+        : null);
 
     if (!authUser) {
       return json({ success: false, message: 'Login required' }, 401);
@@ -74,7 +82,6 @@ export const GET: APIRoute = async ({ params, request, url }) => {
       return json({ success: false, message: 'This book has no readable file' }, 404);
     }
 
-    const mode = url.searchParams.get('mode');
     const ext = path.extname(fileUrl).toLowerCase();
     const isLocal = fileUrl.startsWith('/uploads/');
     const filePath = isLocal ? path.join(process.cwd(), 'public', fileUrl) : null;
@@ -151,6 +158,9 @@ export const GET: APIRoute = async ({ params, request, url }) => {
       return new Response(stream, {
         status: 200,
         headers: {
+          'Referrer-Policy': 'no-referrer',
+          'X-Content-Type-Options': 'nosniff',
+          'Content-Security-Policy': "default-src 'none'; img-src data:; style-src 'unsafe-inline'",
           'Content-Type': getContentType(ext),
           'Content-Disposition': `${disposition}; filename="${downloadName}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`,
           'Content-Length': String(size),
@@ -259,7 +269,12 @@ function getRenderMode(ext: string): 'text' | 'pdf' | 'html' | 'download' {
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      // Keep request URLs (which may carry a one-time ?token= for the PDF
+      // iframe) out of the Referer header on any outbound navigation.
+      'Referrer-Policy': 'no-referrer',
+    },
   });
 }
 

@@ -4,22 +4,18 @@ import type { APIRoute } from 'astro';
 import { db } from '@lib/db';
 import { contentItems, contentCategories, userContentPurchases } from '@lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { getAuthUser, getUserFromSession } from '@lib/auth';
+import { getAuthUser } from '@lib/auth';
 
 export const GET: APIRoute = async ({ request }) => {
   try {
-    // Auth via the Authorization header, or `?token=` for contexts that cannot
-    // set headers (the library page passes the session token in the query).
-    const url = new URL(request.url);
-    const authUser =
-      (await getAuthUser(request)) ||
-      (await getUserFromSession(url.searchParams.get('token') || undefined));
+    // Auth via the HttpOnly session cookie (or Authorization header).
+    const authUser = await getAuthUser(request);
 
     // Subscriber-only: only an authenticated, active subscriber may see the
     // library. Everyone else gets a 401 with a redirect hint to /login.
     if (!authUser || !authUser.isSubscribed || !authUser.subscriptionExpiresAt) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Login required', redirect: '/login' }),
+        JSON.stringify({ success: false, isAuthenticated: false, message: 'Login required', redirect: '/login' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -88,6 +84,7 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response(
       JSON.stringify({
         success: true,
+        isAuthenticated: true,
         items: itemsWithAccess,
         categories,
         totalItems: items.length,

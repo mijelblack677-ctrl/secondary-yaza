@@ -8,17 +8,29 @@ import { eq } from 'drizzle-orm';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const sessionToken = extractBearerToken(request);
-    const user = await getUserFromSession(sessionToken);
+    // Accept the session from the Bearer header or the HttpOnly cookie —
+    // page JS can no longer read the token, so cookies are the norm now.
+    let sessionToken = extractBearerToken(request);
+    if (!sessionToken) {
+      const { readCookie } = await import('@lib/auth');
+      sessionToken = readCookie(request, 'token') || undefined;
+    }
+    const user = sessionToken ? await getUserFromSession(sessionToken) : null;
 
-    if (user) {
+    if (user && sessionToken) {
       // Delete the session
-      await db.delete(userSessions).where(eq(userSessions.token, sessionToken!));
+      await db.delete(userSessions).where(eq(userSessions.token, sessionToken));
     }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Logged out successfully' }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Set-Cookie': 'token=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax',
+        },
+      }
     );
   } catch (error) {
     console.error('Logout error:', error);

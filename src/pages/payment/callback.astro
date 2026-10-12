@@ -40,12 +40,13 @@ import BaseLayoutNoHeader from '../../layouts/BaseLayoutNoHeader.astro';
       const retryBtn = document.getElementById('retry-btn');
 
       const txRef = new URLSearchParams(window.location.search).get('tx_ref');
-      const token = document.cookie.match(/token=([^;]+)/)?.[1];
 
-      // Logged-out visitors came here from registration; logged-in ones from
-      // a renewal or a book purchase.
-      document.getElementById('retry-back').textContent = token ? 'Back to membership' : 'Back to registration';
-      document.getElementById('retry-back').href = token ? '/member-access' : '/register';
+      // The session cookie is HttpOnly (unreadable from JS), so we cannot check
+      // login state directly here. The verify endpoint accepts the cookie via
+      // credentials: 'same-origin' and works for logged-out (registration) too,
+      // so just default the label; it gets corrected after verification.
+      document.getElementById('retry-back').textContent = 'Back to membership';
+      document.getElementById('retry-back').href = '/member-access';
 
       function render(state, message) {
         if (state === 'paid') {
@@ -89,20 +90,20 @@ import BaseLayoutNoHeader from '../../layouts/BaseLayoutNoHeader.astro';
 
         try {
           // A freshly-registered member is NOT signed in yet — their account
-          // only gets a session token once the payment is confirmed. The
-          // verify endpoint activates that pending account using the
-          // unguessable tx_ref and returns the first token, so we must not
-          // require a cookie here. Send the bearer token only if we have one.
-          const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+          // only gets a session once the payment is confirmed. The verify
+          // endpoint activates that pending account using the unguessable
+          // tx_ref and sets an HttpOnly cookie itself, so no Authorization
+          // header is needed here; same-origin credentials send the session
+          // cookie automatically for already-logged-in users.
           const res = await fetch(`/api/payments/verify?tx_ref=${encodeURIComponent(txRef)}`, {
-            headers,
+            credentials: 'same-origin',
           });
           const data = await res.json();
 
           if (data.success && data.status === 'paid') {
-            if (data.token) {
-              // This payment completed the registration: account is live now.
-              document.cookie = `token=${data.token}; path=/; max-age=2592000; SameSite=Lax`;
+            if (data.activated) {
+              // This payment completed the registration: account is live now
+              // and the server already set the HttpOnly session cookie.
               window.location.href = data.redirectTo || '/library';
               return;
             }

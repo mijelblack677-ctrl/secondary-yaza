@@ -54,7 +54,12 @@ export interface StartCheckoutOptions {
 export async function startCheckout(
   opts: StartCheckoutOptions
 ): Promise<{ txRef: string; checkoutUrl: string }> {
-  const txRef = `${opts.paymentType === 'subscription' ? 'SUB' : 'BOOK'}-${crypto.randomUUID()}`;
+  // High-entropy, unguessable reference: /api/payments/verify accepts an
+  // unauthenticated registration callback based on possession of this value.
+  const randomHex = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+    b.toString(16).padStart(2, '0')
+  ).join('');
+  const txRef = `${opts.paymentType === 'subscription' ? 'SUB' : 'BOOK'}-${randomHex}`;
 
   const [row] = await db
     .insert(payments)

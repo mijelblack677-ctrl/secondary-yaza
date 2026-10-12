@@ -4,7 +4,8 @@ import type { APIRoute } from 'astro';
 import { db } from '@lib/db';
 import { users } from '@lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { hashPassword, generateReferralCode } from '@lib/password';
+import { hashPassword, generateReferralCode, validatePasswordStrength } from '@lib/password';
+import { buildSessionCookie } from '@lib/auth';
 import { startCheckout, autoVerifyPendingPayments, SUBSCRIPTION_MWK } from '@lib/payments';
 
 function json(body: unknown, status = 200): Response {
@@ -42,6 +43,12 @@ export const POST: APIRoute = async ({ request }) => {
         success: false,
         message: 'Full name, email, phone, and password are required',
       }, 400);
+    }
+
+    // Reject trivially weak passwords server-side (never trust the client form).
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return json({ success: false, message: passwordError }, 400);
     }
 
     const emailLower = email.toLowerCase();
@@ -95,12 +102,21 @@ export const POST: APIRoute = async ({ request }) => {
       // callback never ran.
       const revived = await autoVerifyPendingPayments(account.id);
       if (revived?.activated && revived.token) {
-        return json({
-          success: true,
-          activated: true,
-          message: 'Your payment was already completed — welcome!',
-          token: revived.token,
-        });
+        // HttpOnly session cookie — the token is never exposed to page JS.
+        return new Response(
+          JSON.stringify({
+            success: true,
+            activated: true,
+            message: 'Your payment was already completed — welcome!',
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Set-Cookie': buildSessionCookie(revived.token, new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+            },
+          }
+        );
       }
 
       const phoneOwner = await db

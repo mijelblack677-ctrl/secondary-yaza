@@ -55,7 +55,9 @@ import { icons } from '../lib/icons';
       const typeFilter = document.getElementById<HTMLSelectElement>('type-filter');
       const subscribeMsg = document.getElementById<HTMLDivElement>('subscribe-msg');
 
-      const token = document.cookie.match(/token=([^;]+)/)?.[1];
+      // Auth is carried by the HttpOnly session cookie (credentials: 'same-origin').
+      // The client never reads the token — it was removed from JS-reachable storage.
+      let isAuthenticated = false;
 
       async function fetchLibrary() {
         loading.style.display = 'flex';
@@ -69,14 +71,12 @@ import { icons } from '../lib/icons';
             type: typeFilter.value,
           });
 
-          if (token) {
-            params.set('token', token);
-          }
 
-          const res = await fetch(`/api/content/library?${params}`);
+          const res = await fetch(`/api/content/library?${params}`, { credentials: 'same-origin' });
           const data = await res.json();
 
           if (data.success) {
+            isAuthenticated = Boolean(data.isAuthenticated);
             renderLibrary(data.items, data.categories, data.isSubscribed);
           } else {
             showError('Failed to load library');
@@ -144,8 +144,8 @@ import { icons } from '../lib/icons';
                   ? `<button class="btn purchase-btn" style="flex: 1;">Purchase</button>`
                   : `<a href="${isSubscribed || isOwned ? `/read/${item.id}` : '/login?redirect=/library'}" class="btn btn-outline" style="flex: 1;">${isOwned ? 'Read Now' : (isSubscribed ? 'Read Now' : 'View')}</a>`
                 }
-                ${isOwned && item.fileUrl && token && isSubscribed
-                  ? `<a href="/api/content/read/${item.id}?token=${encodeURIComponent(token)}&download=1" class="btn btn-outline" style="flex: 0 0 auto;" download title="Download for offline reading">${icon('download')}</a>`
+                ${isOwned && item.fileUrl && isAuthenticated && isSubscribed
+                  ? `<a href="/api/content/read/${item.id}?download=1" class="btn btn-outline" style="flex: 0 0 auto;" download title="Download for offline reading">${icon('download')}</a>`
                   : ''
                 }
               </div>
@@ -189,7 +189,7 @@ import { icons } from '../lib/icons';
         const priceText = card.querySelector('.book-price')?.textContent || '0';
         const priceNum = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
 
-        if (!token) {
+        if (!isAuthenticated) {
           alert('Please log in to purchase books');
           window.location.href = '/login';
           return;
@@ -201,9 +201,9 @@ import { icons } from '../lib/icons';
         try {
           const res = await fetch('/api/content/purchase', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({ contentId, price: priceNum })
           });

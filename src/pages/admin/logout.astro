@@ -13,7 +13,8 @@ import { icons } from '../../lib/icons';
   </div>
 
   <script>
-    document.cookie = 'adminToken=; path=/; max-age=0; SameSite=Lax';
+    // Invalidate the session server-side and clear the HttpOnly cookie.
+    fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     
     setTimeout(() => {
       window.location.href = '/admin/login';

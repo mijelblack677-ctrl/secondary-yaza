@@ -76,7 +76,7 @@ export function extractBearerToken(request: Request): string | null {
  * Get the authenticated user from a request.
  */
 export async function getAuthUser(request: Request): Promise<SessionUser | null> {
-  const token = extractBearerToken(request);
+  const token = extractBearerToken(request) || readCookie(request, 'token') || undefined;
   if (!token) return null;
   return getUserFromSession(token);
 }
@@ -88,4 +88,25 @@ export function generateToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Build the HttpOnly session cookie. The token never lives in document.cookie
+ * anymore, so injected scripts cannot exfiltrate it. `secure` is enabled when
+ * the request arrived over HTTPS (site is served over TLS in production).
+ */
+export function buildSessionCookie(token: string, expiresAt: Date, name = 'token'): string {
+  const maxAge = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+  const secure = process.env.FORCE_INSECURE_COOKIES === '1' ? '' : '; Secure';
+  return `${name}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${secure}`;
+}
+
+export const CLEAR_SESSION_COOKIE_HEADER = (name = 'token') =>
+  `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`;
+
+/** Read a named cookie from a request's Cookie header. */
+export function readCookie(request: Request, name: string): string | null {
+  const header = request.headers.get('Cookie') || '';
+  const match = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : null;
 }

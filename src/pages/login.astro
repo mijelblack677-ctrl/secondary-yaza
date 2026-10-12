@@ -59,7 +59,7 @@ import BaseLayoutNoHeader from '../layouts/BaseLayoutNoHeader.astro';
           const data = await res.json();
 
           if (data.success) {
-            document.cookie = `token=${data.token}; path=/; max-age=2592000; SameSite=Lax`;
+            // Session cookie is set HttpOnly by the server; JS cannot read it.
             window.location.href = '/library';
           } else {
             formError.textContent = data.message || 'Sign in failed';

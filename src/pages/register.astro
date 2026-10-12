@@ -120,9 +120,9 @@ import BaseLayoutNoHeader from '../layouts/BaseLayoutNoHeader.astro';
           const data = await res.json();
 
           if (data.success) {
-            if (data.token) {
-              // An earlier payment had already completed — account activated.
-              document.cookie = `token=${data.token}; path=/; max-age=2592000; SameSite=Lax`;
+            if (data.activated) {
+              // An earlier payment had already completed — account activated
+              // and the HttpOnly session cookie was set server-side.
               window.location.href = data.redirectTo || '/library';
             } else if (data.checkoutUrl) {
               // The account is staged but inactive until PayChangu confirms the fee.

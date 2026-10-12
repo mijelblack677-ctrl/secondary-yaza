@@ -87,7 +87,7 @@ const { title, description = 'Member Access — read the membership collection' 
   <script is:inline define:vars={{ icons }}>
     const ICONS = icons;
     (async () => {
-      const token = document.cookie.match(/token=([^;]+)/)?.[1];
+      // Auth is carried by the HttpOnly session cookie; client never reads tokens.
       const loading = document.getElementById('loading');
       const memberPanel = document.getElementById('member-panel');
       const memberStatus = document.getElementById('member-status');
@@ -98,23 +98,8 @@ const { title, description = 'Member Access — read the membership collection' 
       const withdrawError = document.getElementById('withdraw-error');
       const withdrawStatus = document.getElementById('withdraw-status');
 
-      if (!token) {
-        memberPanel.innerHTML = `
-          <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; border: 1px solid var(--line);">
-            <div style="font-size: 2.5rem; margin-bottom: 1rem;">${ICONS.lock}</div>
-            <h2 style="margin-bottom: 0.5rem; font-family: var(--font-serif-display); font-weight: 300;">Please sign in</h2>
-            <p style="color: var(--ink-60); font-size: 0.9375rem; margin-bottom: 1rem;">Sign in to view your membership and referral earnings.</p>
-            <a href="/login" class="btn-gold">Sign In</a>
-          </div>
-        `;
-        memberPanel.style.display = 'block';
-        return;
-      }
-
       try {
-        const res = await fetch('/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
         const data = await res.json();
 
         if (!data.success) {
@@ -169,7 +154,8 @@ const { title, description = 'Member Access — read the membership collection' 
             try {
               const res = await fetch('/api/payments/create', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'subscription' })
               });
               const result = await res.json();
@@ -208,7 +194,8 @@ const { title, description = 'Member Access — read the membership collection' 
             try {
               const res = await fetch('/api/auth/withdraw', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ amount })
               });
               const result = await res.json();

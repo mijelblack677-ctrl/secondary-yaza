@@ -59,7 +59,7 @@ import BaseLayoutNoHeader from '../../layouts/BaseLayoutNoHeader.astro';
           const data = await res.json();
 
           if (data.success) {
-            document.cookie = `adminToken=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+            // Session cookie is set HttpOnly by the server — nothing to store here.
             window.location.href = '/admin';
           } else {
             formError.textContent = data.message || 'Sign in failed';

@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { db } from '@lib/db';
 import { payments, users } from '@lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { getAuthUser, getUserFromSession } from '@lib/auth';
+import { getAuthUser, getUserFromSession, buildSessionCookie } from '@lib/auth';
 import { verifyPayChanguPayment, fulfillPaidPayment } from '@lib/payments';
 
 function json(body: unknown, status = 200): Response {
@@ -99,17 +99,28 @@ export const GET: APIRoute = async ({ request }) => {
         });
       }
 
-      return json({
-        success: true,
-        status: 'paid',
-        paymentType: payment.paymentType,
-        contentId: payment.contentId,
-        amount: payment.amount,
-        activated: Boolean(outcome.activated),
-        // Present only when this payment completed a registration.
-        token: outcome.token,
-        redirectTo: outcome.activated ? '/library' : null,
-      });
+      // HttpOnly session cookie when this payment completed a registration —
+      // the token is never returned in the JSON body.
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (outcome.activated && outcome.token) {
+        headers['Set-Cookie'] = buildSessionCookie(
+          outcome.token,
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: 'paid',
+          paymentType: payment.paymentType,
+          contentId: payment.contentId,
+          amount: payment.amount,
+          activated: Boolean(outcome.activated),
+          redirectTo: outcome.activated ? '/library' : null,
+        }),
+        { status: 200, headers }
+      );
     }
 
     if (result.explicitlyFailed) {

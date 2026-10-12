@@ -48,11 +48,12 @@ import { icons } from '../../lib/icons';
       }
 
       try {
-        const token = document.cookie.match(/token=([^;]+)/)?.[1];
-        const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+        // Session lives in an HttpOnly cookie now; fetch sends it with credentials.
+        const authHeaders = {};
+        const credOpts = { credentials: 'same-origin' };
 
         const metaRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=meta', {
-          headers: authHeaders
+          headers: authHeaders, credentials: 'same-origin'
         });
 
         const metaData = await metaRes.json().catch(() => ({ success: false, message: 'Unreadable response from server' }));
@@ -64,15 +65,13 @@ import { icons } from '../../lib/icons';
 
         loading.style.display = 'none';
 
-        const streamUrl = token
-          ? '/api/content/read/' + encodeURIComponent(bookId) + '?token=' + encodeURIComponent(token)
-          : '/api/content/read/' + encodeURIComponent(bookId);
-        const downloadUrl = streamUrl + (streamUrl.indexOf('?') !== -1 ? '&' : '?') + 'download=1';
+        const streamUrl = '/api/content/read/' + encodeURIComponent(bookId);
+        const downloadUrl = streamUrl + '?download=1';
         const renderMode = metaData.renderMode || (metaData.textMode ? 'text' : 'download');
 
         if (renderMode === 'text') {
           const textRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=text', {
-            headers: authHeaders
+            headers: authHeaders, credentials: 'same-origin'
           });
           const textData = await textRes.json();
 
@@ -83,7 +82,7 @@ import { icons } from '../../lib/icons';
           }
         } else if (renderMode === 'html') {
           const htmlRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=html', {
-            headers: authHeaders
+            headers: authHeaders, credentials: 'same-origin'
           });
           const htmlData = await htmlRes.json().catch(() => ({ success: false }));
 

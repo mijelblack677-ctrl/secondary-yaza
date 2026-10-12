@@ -16,14 +16,31 @@ export function unauthorized(message = 'Unauthorized'): Response {
   });
 }
 
+/** Cryptographically-random admin session token. */
+export function generateAdminToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 /**
- * Validate the request's Bearer token as an active admin session.
+ * Validate the request's Bearer token or HttpOnly adminToken cookie as an
+ * active admin session.
  */
 export async function requireAdmin(request: Request): Promise<AdminUser | null> {
   const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  let token = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.replace('Bearer ', '')
+    : undefined;
 
-  const token = authHeader.replace('Bearer ', '');
+  // Fall back to the HttpOnly cookie (sent automatically with same-origin fetches).
+  if (!token) {
+    const raw = request.headers.get('Cookie') || '';
+    const match = raw.match(/(?:^|;\s*)adminToken=([^;]+)/);
+    if (match) token = decodeURIComponent(match[1]);
+  }
+
+  if (!token) return null;
 
   try {
     const result = await db
@@ -61,8 +78,22 @@ export async function requireAdmin(request: Request): Promise<AdminUser | null> 
   }
 }
 
-export function generateAdminToken(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+/** Set the HttpOnly admin session cookie (never readable from JS). */
+export function buildAdminCookie(token: string): string {
+  const secure =
+    !process.env.FORCE_INSECURE_COOKIES &&
+    (import.meta.env?.PROD ?? true);
+  return `adminToken=${token}; Path=/; Max-Age=${7 * 24 * 60 * 60}; HttpOnly; SameSite=Lax${secure ? '; Secure' : ''}`;
+}
+
+/** Clear the admin session cookie. */
+export function clearAdminCookie(): string {
+  return 'adminToken=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax';
+}
+
+/** Read a named cookie from a Request. */
+export function readAdminCookie(request: Request, name: string): string | undefined {
+  const raw = request.headers.get('Cookie') || '';
+  const match = raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : undefined;
 }
