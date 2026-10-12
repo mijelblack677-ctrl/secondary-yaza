@@ -1,6 +1,7 @@
-.env
-.env.local
-.env.*.local
 node_modules/
 dist/
-build/
+.astro/
+.env
+__pycache__/
+*.log
+.DS_Store
