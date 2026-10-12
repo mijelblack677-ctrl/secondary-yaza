@@ -1,1 +1,0 @@
-import"./hoisted.Q5t9qzAc.js";const t=document.getElementById("contact-form"),e=document.getElementById("contact-status");t&&t.addEventListener("submit",n=>{n.preventDefault(),e.textContent="Thanks — your message has been noted. We reply within one business day.",e.style.display="block",t.reset()});
