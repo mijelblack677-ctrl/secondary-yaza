@@ -1,0 +1,311 @@
+import { c as createComponent, d as renderComponent, r as renderTemplate, e as defineScriptVars, u as unescapeHTML, m as maybeRenderHead } from '../../chunks/astro/server_YYywBuIZ.mjs';
+import 'kleur/colors';
+import { $ as $$BaseLayout } from '../../chunks/BaseLayout_njTcWfK9.mjs';
+import { i as icons } from '../../chunks/icons_DHD92_qN.mjs';
+export { renderers } from '../../renderers.mjs';
+
+var __freeze = Object.freeze;
+var __defProp = Object.defineProperty;
+var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __freeze(raw || cooked.slice()) }));
+var _a;
+const $$id = createComponent(async ($$result, $$props, $$slots) => {
+  return renderTemplate`${renderComponent($$result, "BaseLayout", $$BaseLayout, { "title": "Reading", "description": "Read a title from the Secondary Yaza collection." }, { "default": async ($$result2) => renderTemplate(_a || (_a = __template([" ", '<div class="reader-layout"> <aside class="reader-sidebar"> <div class="reader-sidebar-header"> <div class="reader-sidebar-title"><span class="icon-inline">', '</span> Your Library</div> <a href="/library" class="reader-sidebar-link">Browse All Books</a> <a href="/" class="reader-sidebar-link">Home</a> <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);"> <a href="/logout" class="reader-sidebar-link">Sign Out</a> </div> </div> <div id="reader-nav" style="font-family: var(--font-sans); font-size: 13px;"> <p style="color: rgba(255,255,255,0.4); font-size: 12px;">Loading\u2026</p> </div> </aside> <main class="reader-content" id="reader-content"> <div id="loading" class="loading"> <div class="spinner"></div> <p class="text-muted">Loading book\u2026</p> </div> </main> </div> <script>(function(){', `
+    const ICONS = icons;
+
+    // Client-side icon lookup with safe fallback (fixes "icon is not defined")
+    function icon(name) {
+      return ICONS[name] || ICONS.file || '';
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const bookId = urlParams.get('id') || document.location.pathname.split('/').pop();
+
+      const loading = document.getElementById('loading');
+      const readerContent = document.getElementById('reader-content');
+
+      if (!bookId) {
+        readerContent.innerHTML = emptyState('bookOpen', 'Book Not Found', "The book you're looking for doesn't exist.");
+        return;
+      }
+
+      try {
+        // Session lives in an HttpOnly cookie now; fetch sends it with credentials.
+        const authHeaders = {};
+        const credOpts = { credentials: 'same-origin' };
+
+        const metaRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=meta', {
+          headers: authHeaders, credentials: 'same-origin'
+        });
+
+        const metaData = await metaRes.json().catch(() => ({ success: false, message: 'Unreadable response from server' }));
+
+        if (!metaData.success) {
+          readerContent.innerHTML = emptyState('alert', metaData.message || 'Error', 'Unable to load this book.');
+          return;
+        }
+
+        loading.style.display = 'none';
+
+        const streamUrl = '/api/content/read/' + encodeURIComponent(bookId);
+        const downloadUrl = streamUrl + '?download=1';
+        const renderMode = metaData.renderMode || (metaData.textMode ? 'text' : 'download');
+
+        if (renderMode === 'text') {
+          const textRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=text', {
+            headers: authHeaders, credentials: 'same-origin'
+          });
+          const textData = await textRes.json();
+
+          if (textData.success && textData.blocks) {
+            renderTextContent(textData.blocks, metaData, downloadUrl);
+          } else {
+            readerContent.innerHTML = emptyState('file', 'Unable to Display Content', 'This book format is not supported for text viewing.');
+          }
+        } else if (renderMode === 'html') {
+          const htmlRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=html', {
+            headers: authHeaders, credentials: 'same-origin'
+          });
+          const htmlData = await htmlRes.json().catch(() => ({ success: false }));
+
+          if (htmlData.success && htmlData.html) {
+            renderHtmlContent(htmlData.html, metaData, downloadUrl);
+          } else {
+            readerContent.innerHTML = renderDownload(metaData, downloadUrl);
+          }
+        } else if (renderMode === 'pdf') {
+          readerContent.innerHTML = '<div class="reader-container">' + readerHeader(metaData, downloadUrl) + '<iframe class="reader-frame" src="' + streamUrl + '" title="' + escapeHtml(metaData.title) + '"></iframe></div>';
+        } else {
+          readerContent.innerHTML = renderDownload(metaData, downloadUrl);
+        }
+
+        const nav = document.getElementById('reader-nav');
+        if (nav) {
+          nav.innerHTML = '<p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 0.5rem;">Format: ' + escapeHtml(metaData.label) + ' | ' + (metaData.size ? (metaData.size / 1024 / 1024).toFixed(1) + ' MB' : 'Unknown') + '</p>';
+        }
+
+        document.title = metaData.title + ' | Secondary Yaza';
+      } catch (error) {
+        console.error('Reader error:', error);
+        loading.style.display = 'none';
+        readerContent.innerHTML = emptyState('alert', 'Error Loading Book', 'Something went wrong. Please try again.');
+      }
+    });
+
+    function emptyState(iconName, title, message) {
+      return '<div class="empty-state"><div class="icon">' + icon(iconName) + '</div><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(message) + '</p><a href="/library" class="btn btn-primary" style="margin-top: 1rem;">Back to Library</a></div>';
+    }
+
+    function readerHeader(meta, downloadUrl) {
+      const size = meta.size ? (meta.size / 1024 / 1024).toFixed(1) + ' MB' : '';
+      return '<div class="reader-header"><h1 class="reader-title">' + escapeHtml(meta.title) + '</h1><p class="reader-author">by ' + escapeHtml(meta.author || 'Unknown Author') + '</p><div class="reader-toolbar"><span class="reader-meta">' + escapeHtml(meta.label) + (size ? ' \xB7 ' + size : '') + '</span><a class="btn" href="' + downloadUrl + '" download>' + icon('download') + ' Download for offline</a></div></div>';
+    }
+
+    function renderDownload(meta, downloadUrl) {
+      return '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-content-block"><p>This title is a <strong>' + escapeHtml(meta.label) + '</strong> file, which can\\'t be previewed in the browser. Download it to read offline with your device\\'s document viewer.</p></div></div>';
+    }
+
+    function renderHtmlContent(html, meta, downloadUrl) {
+      const container = document.getElementById('reader-content');
+      const loading = document.getElementById('loading');
+
+      loading.style.display = 'none';
+
+      container.innerHTML = '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-article">' + html + '</div></div>';
+
+      document.title = meta.title + ' | Secondary Yaza';
+    }
+
+    async function renderTextContent(blocks, meta, downloadUrl) {
+      const container = document.getElementById('reader-content');
+      const loading = document.getElementById('loading');
+
+      loading.style.display = 'none';
+
+      const html = blocks.map(function(block) {
+        switch (block.type) {
+          case 'h1':
+            return '<h1>' + escapeHtml(block.text) + '</h1>';
+          case 'h2':
+            return '<h2>' + escapeHtml(block.text) + '</h2>';
+          case 'h3':
+            return '<h3>' + escapeHtml(block.text) + '</h3>';
+          case 'quote':
+            return '<blockquote>' + escapeHtml(block.text) + '</blockquote>';
+          case 'li':
+            return '<li>' + escapeHtml(block.text) + '</li>';
+          case 'break':
+            return '<br/>';
+          default:
+            return '<p>' + escapeHtml(block.text) + '</p>';
+        }
+      }).join('');
+
+      container.innerHTML = '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-content-block">' + html + '</div></div>';
+
+      document.title = meta.title + ' | Secondary Yaza';
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  })();<\/script> `], [" ", '<div class="reader-layout"> <aside class="reader-sidebar"> <div class="reader-sidebar-header"> <div class="reader-sidebar-title"><span class="icon-inline">', '</span> Your Library</div> <a href="/library" class="reader-sidebar-link">Browse All Books</a> <a href="/" class="reader-sidebar-link">Home</a> <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);"> <a href="/logout" class="reader-sidebar-link">Sign Out</a> </div> </div> <div id="reader-nav" style="font-family: var(--font-sans); font-size: 13px;"> <p style="color: rgba(255,255,255,0.4); font-size: 12px;">Loading\u2026</p> </div> </aside> <main class="reader-content" id="reader-content"> <div id="loading" class="loading"> <div class="spinner"></div> <p class="text-muted">Loading book\u2026</p> </div> </main> </div> <script>(function(){', `
+    const ICONS = icons;
+
+    // Client-side icon lookup with safe fallback (fixes "icon is not defined")
+    function icon(name) {
+      return ICONS[name] || ICONS.file || '';
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const bookId = urlParams.get('id') || document.location.pathname.split('/').pop();
+
+      const loading = document.getElementById('loading');
+      const readerContent = document.getElementById('reader-content');
+
+      if (!bookId) {
+        readerContent.innerHTML = emptyState('bookOpen', 'Book Not Found', "The book you're looking for doesn't exist.");
+        return;
+      }
+
+      try {
+        // Session lives in an HttpOnly cookie now; fetch sends it with credentials.
+        const authHeaders = {};
+        const credOpts = { credentials: 'same-origin' };
+
+        const metaRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=meta', {
+          headers: authHeaders, credentials: 'same-origin'
+        });
+
+        const metaData = await metaRes.json().catch(() => ({ success: false, message: 'Unreadable response from server' }));
+
+        if (!metaData.success) {
+          readerContent.innerHTML = emptyState('alert', metaData.message || 'Error', 'Unable to load this book.');
+          return;
+        }
+
+        loading.style.display = 'none';
+
+        const streamUrl = '/api/content/read/' + encodeURIComponent(bookId);
+        const downloadUrl = streamUrl + '?download=1';
+        const renderMode = metaData.renderMode || (metaData.textMode ? 'text' : 'download');
+
+        if (renderMode === 'text') {
+          const textRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=text', {
+            headers: authHeaders, credentials: 'same-origin'
+          });
+          const textData = await textRes.json();
+
+          if (textData.success && textData.blocks) {
+            renderTextContent(textData.blocks, metaData, downloadUrl);
+          } else {
+            readerContent.innerHTML = emptyState('file', 'Unable to Display Content', 'This book format is not supported for text viewing.');
+          }
+        } else if (renderMode === 'html') {
+          const htmlRes = await fetch('/api/content/read/' + encodeURIComponent(bookId) + '?mode=html', {
+            headers: authHeaders, credentials: 'same-origin'
+          });
+          const htmlData = await htmlRes.json().catch(() => ({ success: false }));
+
+          if (htmlData.success && htmlData.html) {
+            renderHtmlContent(htmlData.html, metaData, downloadUrl);
+          } else {
+            readerContent.innerHTML = renderDownload(metaData, downloadUrl);
+          }
+        } else if (renderMode === 'pdf') {
+          readerContent.innerHTML = '<div class="reader-container">' + readerHeader(metaData, downloadUrl) + '<iframe class="reader-frame" src="' + streamUrl + '" title="' + escapeHtml(metaData.title) + '"></iframe></div>';
+        } else {
+          readerContent.innerHTML = renderDownload(metaData, downloadUrl);
+        }
+
+        const nav = document.getElementById('reader-nav');
+        if (nav) {
+          nav.innerHTML = '<p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 0.5rem;">Format: ' + escapeHtml(metaData.label) + ' | ' + (metaData.size ? (metaData.size / 1024 / 1024).toFixed(1) + ' MB' : 'Unknown') + '</p>';
+        }
+
+        document.title = metaData.title + ' | Secondary Yaza';
+      } catch (error) {
+        console.error('Reader error:', error);
+        loading.style.display = 'none';
+        readerContent.innerHTML = emptyState('alert', 'Error Loading Book', 'Something went wrong. Please try again.');
+      }
+    });
+
+    function emptyState(iconName, title, message) {
+      return '<div class="empty-state"><div class="icon">' + icon(iconName) + '</div><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(message) + '</p><a href="/library" class="btn btn-primary" style="margin-top: 1rem;">Back to Library</a></div>';
+    }
+
+    function readerHeader(meta, downloadUrl) {
+      const size = meta.size ? (meta.size / 1024 / 1024).toFixed(1) + ' MB' : '';
+      return '<div class="reader-header"><h1 class="reader-title">' + escapeHtml(meta.title) + '</h1><p class="reader-author">by ' + escapeHtml(meta.author || 'Unknown Author') + '</p><div class="reader-toolbar"><span class="reader-meta">' + escapeHtml(meta.label) + (size ? ' \xB7 ' + size : '') + '</span><a class="btn" href="' + downloadUrl + '" download>' + icon('download') + ' Download for offline</a></div></div>';
+    }
+
+    function renderDownload(meta, downloadUrl) {
+      return '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-content-block"><p>This title is a <strong>' + escapeHtml(meta.label) + '</strong> file, which can\\\\'t be previewed in the browser. Download it to read offline with your device\\\\'s document viewer.</p></div></div>';
+    }
+
+    function renderHtmlContent(html, meta, downloadUrl) {
+      const container = document.getElementById('reader-content');
+      const loading = document.getElementById('loading');
+
+      loading.style.display = 'none';
+
+      container.innerHTML = '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-article">' + html + '</div></div>';
+
+      document.title = meta.title + ' | Secondary Yaza';
+    }
+
+    async function renderTextContent(blocks, meta, downloadUrl) {
+      const container = document.getElementById('reader-content');
+      const loading = document.getElementById('loading');
+
+      loading.style.display = 'none';
+
+      const html = blocks.map(function(block) {
+        switch (block.type) {
+          case 'h1':
+            return '<h1>' + escapeHtml(block.text) + '</h1>';
+          case 'h2':
+            return '<h2>' + escapeHtml(block.text) + '</h2>';
+          case 'h3':
+            return '<h3>' + escapeHtml(block.text) + '</h3>';
+          case 'quote':
+            return '<blockquote>' + escapeHtml(block.text) + '</blockquote>';
+          case 'li':
+            return '<li>' + escapeHtml(block.text) + '</li>';
+          case 'break':
+            return '<br/>';
+          default:
+            return '<p>' + escapeHtml(block.text) + '</p>';
+        }
+      }).join('');
+
+      container.innerHTML = '<div class="reader-container">' + readerHeader(meta, downloadUrl) + '<div class="reader-content-block">' + html + '</div></div>';
+
+      document.title = meta.title + ' | Secondary Yaza';
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  })();<\/script> `])), maybeRenderHead(), unescapeHTML(icons.book), defineScriptVars({ icons })) })}`;
+}, "/workspace/src/pages/read/[id].astro", void 0);
+
+const $$file = "/workspace/src/pages/read/[id].astro";
+const $$url = "/read/[id]";
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: $$id,
+  file: $$file,
+  url: $$url
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };
