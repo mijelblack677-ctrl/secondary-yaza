@@ -27,8 +27,11 @@ import { icons } from '../../lib/icons';
     </main>
   </div>
 
-  <script is:inline type="module">
-    import { icon } from '../../lib/icons';
+  <script is:inline>
+    const ICONS = ${JSON.stringify(icons)};
+    function icon(name) {
+      return ICONS[name] || '';
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -130,7 +133,6 @@ import { icons } from '../../lib/icons';
       `;
     }
 
-    // Shared header: title, author, format/size and an offline download button.
     function readerHeader(meta, downloadUrl) {
       const size = meta.size ? `${(meta.size / 1024 / 1024).toFixed(1)} MB` : '';
       return `
