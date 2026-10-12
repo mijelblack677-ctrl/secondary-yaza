@@ -44,21 +44,10 @@ import { icons } from '../../lib/icons';
 
       try {
         const token = document.cookie.match(/token=([^;]+)/)?.[1];
-
-        if (!token) {
-          readerContent.innerHTML = `
-            <div class="empty-state">
-              <div class="icon">${icon('lock')}</div>
-              <h3>Authentication Required</h3>
-              <p>Please sign in to read this book.</p>
-              <a href="/login" class="btn btn-primary" style="margin-top: 1rem;">Sign In</a>
-            </div>
-          `;
-          return;
-        }
+        const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
         const metaRes = await fetch(`/api/content/read/${bookId}?mode=meta`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: authHeaders
         });
 
         const metaData = await metaRes.json().catch(() => ({ success: false, message: 'Unreadable response from server' }));
@@ -70,13 +59,15 @@ import { icons } from '../../lib/icons';
 
         loading.style.display = 'none';
 
-        const streamUrl = `/api/content/read/${bookId}?token=${encodeURIComponent(token)}`;
-        const downloadUrl = `${streamUrl}&download=1`;
+        const streamUrl = token
+          ? `/api/content/read/${bookId}?token=${encodeURIComponent(token)}`
+          : `/api/content/read/${bookId}`;
+        const downloadUrl = `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}download=1`;
         const renderMode = metaData.renderMode || (metaData.textMode ? 'text' : 'download');
 
         if (renderMode === 'text') {
           const textRes = await fetch(`/api/content/read/${bookId}?mode=text`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: authHeaders
           });
           const textData = await textRes.json();
 
@@ -87,7 +78,7 @@ import { icons } from '../../lib/icons';
           }
         } else if (renderMode === 'html') {
           const htmlRes = await fetch(`/api/content/read/${bookId}?mode=html`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: authHeaders
           });
           const htmlData = await htmlRes.json().catch(() => ({ success: false }));
 
