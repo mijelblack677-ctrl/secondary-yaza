@@ -1,0 +1,111 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { icons } from '../lib/icons';
+---
+
+<BaseLayout
+  title="Secondary Yaza"
+  description="Secondary Yaza — a digital library for deep reading. Curated books, guides, and research for students and lifelong learners."
+>
+  <!-- Hero -->
+  <section class="section-strong hero-strong">
+    <span class="check-pattern" aria-hidden="true"></span>
+
+    <div class="hero-head">
+      <div class="hero-copy">
+        <p class="hero-kicker">Digital Library for Learners</p>
+        <div class="hero-number">01</div>
+        <p class="hero-sub">Knowledge, curated &amp; open</p>
+
+        <h1 class="headline">
+          We curate knowledge,<br />
+          <span class="italic">elevating</span> minds.
+        </h1>
+
+        <p class="intro">
+          Secondary Yaza is a digital library built for deep reading — curated books, guides
+          and research for students and lifelong learners.
+        </p>
+
+        <div class="hero-actions">
+          <a href="/library" class="btn-gold">Explore Collection</a>
+          <a href="/register" class="btn-ghost">Get Started</a>
+        </div>
+      </div>
+
+      <div class="hero-art">
+        <img
+          src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1000&q=70"
+          alt="Shelves of books in a library"
+          loading="eager"
+        />
+      </div>
+    </div>
+
+    <div class="hero-detail">
+      <div class="stat-row">
+        <div class="stat">
+          <div class="num">10K+</div>
+          <div class="lbl">Resources</div>
+        </div>
+        <div class="stat">
+          <div class="num">50+</div>
+          <div class="lbl">Subjects</div>
+        </div>
+        <div class="stat">
+          <div class="num">25K+</div>
+          <div class="lbl">Learners</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- What you'll find -->
+  <section class="features">
+    <div class="container">
+      <div class="section-header">
+        <span class="badge">Digital Collection</span>
+        <h2>What you will find</h2>
+        <p>Four kinds of material, one calm place to read them.</p>
+      </div>
+
+      <div class="features-grid">
+        <a href="/library" class="feature-card">
+          <div class="feature-icon" set:html={icons.book}></div>
+          <h3>Books</h3>
+          <p>Fiction, non-fiction and academic texts across many disciplines.</p>
+        </a>
+        <a href="/library" class="feature-card">
+          <div class="feature-icon" set:html={icons.file}></div>
+          <h3>Guides</h3>
+          <p>Study guides, research aids and practical reference material.</p>
+        </a>
+        <a href="/library" class="feature-card">
+          <div class="feature-icon" set:html={icons.graduation}></div>
+          <h3>Courses</h3>
+          <p>Structured material for self-paced study and development.</p>
+        </a>
+        <a href="/library" class="feature-card">
+          <div class="feature-icon" set:html={icons.search}></div>
+          <h3>Research</h3>
+          <p>Sources selected for coursework, independent study and enquiry.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to action -->
+  <section class="section-strong cta-strong">
+    <div class="container text-center">
+      <p class="hero-kicker">Start reading today</p>
+      <h2 class="headline">A library built <span class="italic">for learners.</span></h2>
+      <p class="intro">
+        Create a free account to browse the full collection — free titles open instantly.
+      </p>
+      <div class="hero-actions">
+        <a href="/register" class="btn-gold">Create Free Account</a>
+        <a href="/login" class="btn-ghost">Sign In</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

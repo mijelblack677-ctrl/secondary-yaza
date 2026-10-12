@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { icons } from '../lib/icons';
+---
+
+<BaseLayout title="About" description="About Secondary Yaza — our mission, standards, and the people behind the collection.">
+  <section class="about">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-content">
+          <span class="badge">About Us</span>
+          <h2>Our mission</h2>
+          <p>
+            Secondary Yaza provides access to quality educational content and resources for students, researchers, and lifelong learners. We are committed to making knowledge accessible in a secure and well-organised environment.
+          </p>
+          <p>
+            As an educational platform we maintain academic standards in how content is selected and presented. Our goal is to support learning and research with reliable, clearly organised material.
+          </p>
+          <a href="/library" class="page-link">Browse the collection</a>
+        </div>
+
+        <div class="about-image-wrapper">
+          <div class="about-photo" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>Platform features</h2>
+        <p>Everything you need to read, study, and keep coming back.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon" set:html={icons.book}></div>
+          <h3>Curated Collection</h3>
+          <p>Books and resources selected for educational value across multiple disciplines.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" set:html={icons.lock}></div>
+          <h3>Secure Platform</h3>
+          <p>Protected access with secure authentication and clear data protection measures.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" set:html={icons.bookOpen}></div>
+          <h3>Reading Interface</h3>
+          <p>A calm, focused reader designed for comfortable extended reading sessions.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" set:html={icons.card}></div>
+          <h3>Access Options</h3>
+          <p>Straightforward pricing for premium titles, with plenty available for free.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

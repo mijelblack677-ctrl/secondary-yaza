@@ -1,0 +1,318 @@
+---
+import BaseLayout from '../../layouts/BaseLayoutNoHeader.astro';
+import { icons } from '../../lib/icons';
+---
+
+<BaseLayout title="Manage Content" description="Manage library content">
+  <div class="admin-wrap">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-inner">
+        <a href="/admin" class="admin-sidebar-logo">
+          <img src="/logo.svg" alt="Secondary Yaza" />
+          <div class="admin-sidebar-wordmark">
+            Secondary <span>Yaza</span>
+            <div class="admin-sidebar-tag">Administrator</div>
+          </div>
+        </a>
+
+        <nav class="admin-nav">
+          <a href="/admin" class="admin-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Dashboard
+          </a>
+          <a href="/admin/content" class="admin-nav-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+            </svg>
+            Content
+          </a>
+          <a href="/admin/upload" class="admin-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Upload Book
+          </a>
+          <a href="/admin/settings" class="admin-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2H3a2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 0 001.82-.33l.06.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+            Settings
+          </a>
+        </nav>
+
+        <div class="admin-signout">
+          <a href="/admin/logout">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign Out
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <div class="admin-topbar">
+        <div class="admin-topbar-left">
+          <h1 class="admin-page-title">Manage Content</h1>
+          <p class="admin-page-sub">View, edit, and organize library items</p>
+        </div>
+        <a href="/admin/upload" class="admin-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload New
+        </a>
+      </div>
+
+      <div class="admin-section">
+        <div class="admin-filter">
+          <select id="filter-type">
+            <option value="all">All Content</option>
+            <option value="books">Books Only</option>
+            <option value="published">Published</option>
+            <option value="draft">Drafts</option>
+          </select>
+        </div>
+
+        <div id="loading" class="admin-loading">
+          <div class="admin-spinner"></div>
+          <div>Loading content...</div>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table id="content-table" style="display: none;">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="content-body"></tbody>
+          </table>
+
+          <input type="file" id="cover-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+
+          <div id="empty-state" class="admin-empty" style="display: none;">
+            <div class="admin-empty-icon" set:html={icons.inbox}></div>
+            <div>No content found</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    import { icon } from '../../lib/icons';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const token = document.cookie.match(/adminToken=([^;]+)/)?.[1];
+      const loading = document.getElementById('loading');
+      const table = document.getElementById('content-table');
+      const tbody = document.getElementById('content-body');
+      const emptyState = document.getElementById('empty-state');
+      const filterType = document.getElementById('filter-type');
+      const coverInput = document.getElementById('cover-input');
+      let coverTargetId = null;
+
+      if (!token) {
+        document.querySelector('.admin-main').innerHTML = `
+          <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; border: 1px solid var(--line);">
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">${icon('lock')}</div>
+            <h2 style="margin-bottom: 0.5rem; font-family: var(--font-serif-display); font-weight: 300;">Admin Access Required</h2>
+            <p style="color: var(--ink-60); font-size: 0.9375rem; margin-bottom: 1rem;">Please log in to access the admin panel.</p>
+            <a href="/admin/login" class="admin-btn">Admin Login</a>
+          </div>
+        `;
+        return;
+      }
+
+      async function fetchContent() {
+        loading.style.display = 'flex';
+        table.style.display = 'none';
+        emptyState.style.display = 'none';
+
+        try {
+          const res = await fetch(`/api/admin/content?type=${filterType.value}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            renderContent(data.items, data.categories);
+          } else {
+            showError('Failed to load content');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          showError('Connection error');
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      function renderContent(items, categories) {
+        if (items.length === 0) {
+          emptyState.style.display = 'block';
+          table.style.display = 'none';
+          return;
+        }
+
+        table.style.display = 'table';
+        emptyState.style.display = 'none';
+
+        const categoryMap = {};
+        categories.forEach(c => categoryMap[c.id] = c.name);
+
+        tbody.innerHTML = items.map(item => `
+          <tr>
+            <td style="font-family: monospace; font-size: 0.8125rem; color: var(--ink-30);">${item.id.slice(0, 8)}...</td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                ${item.thumbnailUrl
+                  ? `<img src="${escapeHtml(item.thumbnailUrl)}" alt="" style="width: 36px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line);">`
+                  : `<span class="admin-cover-empty" title="No cover photo">${icon('image')}</span>`}
+                <div>
+                  <div style="font-weight: 500;">${escapeHtml(item.title)}</div>
+                  <div style="font-size: 0.75rem; color: var(--ink-30);">${categoryMap[item.categoryId] || 'Uncategorized'}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="admin-badge ${item.isPremium ? 'admin-badge-premium' : ''}">
+                ${item.contentType.toUpperCase()}
+                ${item.isPremium ? ` <span class="badge-star">${icon('star')}</span>` : ''}
+              </span>
+            </td>
+            <td>${item.fileUrl ? icon('file') : icon('alert')}</td>
+            <td>
+              <span class="admin-badge ${item.isPublished ? 'admin-badge-published' : 'admin-badge-draft'}">
+                ${item.isPublished ? 'Published' : 'Draft'}
+              </span>
+            </td>
+            <td>
+              ${item.isPremium ? `MWK ${parseFloat(item.price || 0).toLocaleString()}` : 'FREE'}
+            </td>
+            <td>
+              <div style="display: flex; gap: 0.5rem;">
+                <a href="/read/${item.id}" target="_blank" class="admin-link-action" title="Preview">
+                  ${icon('eye')}
+                </a>
+                <button class="admin-cover-btn admin-link-action" data-id="${item.id}" title="${item.thumbnailUrl ? 'Change cover photo' : 'Add cover photo'}">
+                  ${icon('image')}
+                </button>
+                ${item.contentType === 'book' && item.fileUrl ? `
+                  <button class="admin-delete-btn" data-id="${item.id}" title="Delete">
+                    ${icon('trash')}
+                  </button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+        tbody.querySelectorAll('.admin-cover-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            coverTargetId = btn.dataset.id;
+            coverInput.value = '';
+            coverInput.click();
+          });
+        });
+
+        tbody.querySelectorAll('.admin-delete-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = btn.dataset.id;
+
+            if (!confirm('Are you sure you want to delete this content?')) return;
+
+            try {
+              const res = await fetch('/api/admin/content', {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ contentId: id })
+              });
+
+              const data = await res.json();
+
+              if (data.success) {
+                fetchContent();
+              } else {
+                showError(data.message || 'Delete failed');
+              }
+            } catch (error) {
+              console.error('Delete error:', error);
+              showError('Delete failed. Please try again.');
+            }
+          });
+        });
+      }
+
+      function showError(message) {
+        loading.style.display = 'none';
+        emptyState.style.display = 'block';
+        emptyState.querySelector('div:last-child').textContent = message;
+      }
+
+      coverInput.addEventListener('change', async () => {
+        const chosen = coverInput.files?.[0];
+        if (!chosen || !coverTargetId) return;
+
+        if (chosen.size > 5 * 1024 * 1024) {
+          showError('Cover image must be 5 MB or smaller');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('contentId', coverTargetId);
+        formData.append('thumbnail', chosen);
+
+        try {
+          const res = await fetch('/api/admin/upload', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            fetchContent();
+          } else {
+            showError(data.message || 'Cover upload failed');
+          }
+        } catch (error) {
+          console.error('Cover upload error:', error);
+          showError('Cover upload failed. Please try again.');
+        }
+      });
+
+      filterType.addEventListener('change', fetchContent);
+      fetchContent();
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</BaseLayout>

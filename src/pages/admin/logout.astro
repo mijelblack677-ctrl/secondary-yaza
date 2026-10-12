@@ -1,0 +1,22 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { icons } from '../../lib/icons';
+---
+
+<BaseLayout title="Admin Logging Out">
+  <div style="display: flex; align-items: center; justify-content: center; min-height: 60vh;">
+    <div style="text-align: center;">
+      <div class="icon-big" set:html={icons.lock}></div>
+      <h1>Logging Out</h1>
+      <p class="text-muted">Admin session is being terminated...</p>
+    </div>
+  </div>
+
+  <script>
+    document.cookie = 'adminToken=; path=/; max-age=0; SameSite=Lax';
+    
+    setTimeout(() => {
+      window.location.href = '/admin/login';
+    }, 1500);
+  </script>
+</BaseLayout>

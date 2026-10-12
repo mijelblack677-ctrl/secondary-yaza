@@ -1,0 +1,250 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { icons } from '../lib/icons';
+---
+
+<BaseLayout title="Library" description="Browse our collection of books and educational resources">
+  <section class="container" style="padding: 3rem var(--page-x) 1.5rem; max-width: 1280px;">
+    <div style="text-align: center; margin-bottom: 2.25rem;">
+      <span class="badge" style="display: inline-block; margin-bottom: 1rem;">Digital Collection</span>
+      <h1 style="margin-bottom: 0.5rem;">Library</h1>
+      <p class="text-muted" style="max-width: 520px; margin: 0.5rem auto 0; font-family: var(--font-body); font-size: 17px;">
+        Browse the collection of books and educational resources. Purchase premium titles to read instantly.
+      </p>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 1.75rem; flex-wrap: wrap; justify-content: center;">
+      <select id="category-filter" class="form-input" style="flex: 0 1 240px; min-width: 180px;">
+        <option value="all">All Categories</option>
+      </select>
+      <select id="type-filter" class="form-input" style="flex: 0 0 auto; min-width: 150px;">
+        <option value="all">All Types</option>
+        <option value="book">Books</option>
+        <option value="video">Videos</option>
+        <option value="audio">Audio</option>
+      </select>
+    </div>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p class="text-muted">Loading…</p>
+    </div>
+
+    <div id="library-grid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.25rem;"></div>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="icon" set:html={icons.inbox}></div>
+      <h3>No resources found</h3>
+      <p>Try adjusting your filters or check back later for new content.</p>
+    </div>
+
+    <div id="subscribe-msg" style="display: none; margin-top: 2rem; padding: 1rem 1.25rem; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--line); text-align: center;">
+      <p style="margin: 0 0 0.4rem;">To borrow and read books you must be a subscriber.</p>
+      <a href="/login?redirect=/library" class="btn" style="text-decoration: none;">Sign in</a>
+    </div>
+  </section>
+
+  <script>
+    import { icon } from '../lib/icons';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const grid = document.getElementById('library-grid');
+      const loading = document.getElementById('loading');
+      const emptyState = document.getElementById('empty-state');
+      const categoryFilter = document.getElementById('category-filter');
+      const typeFilter = document.getElementById('type-filter');
+      const subscribeMsg = document.getElementById('subscribe-msg');
+
+      const token = document.cookie.match(/token=([^;]+)/)?.[1];
+
+      async function fetchLibrary() {
+        loading.style.display = 'flex';
+        grid.style.display = 'none';
+        emptyState.style.display = 'none';
+        subscribeMsg.style.display = 'none';
+
+        try {
+          const params = new URLSearchParams({
+            category: categoryFilter.value,
+            type: typeFilter.value,
+          });
+
+          if (token) {
+            params.set('token', token);
+          }
+
+          const res = await fetch(`/api/content/library?${params}`);
+          const data = await res.json();
+
+          if (data.success) {
+            renderLibrary(data.items, data.categories, data.isSubscribed);
+          } else {
+            showError('Failed to load library');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          showError('Connection error');
+        } finally {
+          loading.style.display = 'none';
+        }
+      }
+
+      function renderLibrary(items, categories, isSubscribed) {
+        categoryFilter.innerHTML = '<option value="all">All Categories</option>';
+        categories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat.id;
+          opt.textContent = cat.name;
+          categoryFilter.appendChild(opt);
+        });
+
+        if (items.length === 0) {
+          emptyState.style.display = 'block';
+          grid.style.display = 'none';
+          return;
+        }
+
+        grid.style.display = 'grid';
+        emptyState.style.display = 'none';
+        grid.innerHTML = items.map(item => createBookCard(item, isSubscribed)).join('');
+      }
+
+      function createBookCard(item, isSubscribed) {
+        const isOwned = item.isOwned || false;
+        const isPremium = item.isPremium || false;
+        const price = parseFloat(item.price || 0);
+
+        const statusClass = isOwned ? 'owned' : isPremium ? 'premium' : 'available';
+        const statusText = isOwned ? `${icon('check')} Owned` : isPremium ? `MWK ${price.toLocaleString()}` : 'Free';
+        const canPurchase = isPremium && !isOwned && isSubscribed;
+
+        return `
+          <div class="book-card" data-id="${item.id}">
+            <div class="book-cover">
+              ${item.thumbnailUrl
+                ? `<img src="${item.thumbnailUrl}" alt="${escapeHtml(item.title)}" class="book-cover-img" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><span class="book-cover-icon" style="display:none;">${getBookIcon(item.contentType)}</span>`
+                : `<span class="book-cover-icon">${getBookIcon(item.contentType)}</span>`
+              }
+              <div class="book-cover-overlay">
+                <span class="btn">${isOwned ? 'Read Now' : canPurchase ? 'Purchase' : (isSubscribed ? 'Read Now' : 'View')}</span>
+              </div>
+            </div>
+            <div class="book-info">
+              <h3>${escapeHtml(item.title)}</h3>
+              <p class="author">by ${escapeHtml(item.author || 'Unknown Author')}</p>
+              <p class="description">${escapeHtml(item.description || 'No description available')}</p>
+              <div class="book-meta">
+                <span class="book-price ${!isPremium ? 'free' : ''}">
+                  ${isPremium ? `MWK ${price.toLocaleString()}` : 'FREE'}
+                </span>
+                <span class="book-status ${statusClass}">${statusText}</span>
+              </div>
+              <div style="margin-top: 0.9rem; display: flex; gap: 0.5rem;">
+                ${canPurchase
+                  ? `<button class="btn purchase-btn" style="flex: 1;">Purchase</button>`
+                  : `<a href="${isSubscribed || isOwned ? `/read/${item.id}` : '/login?redirect=/library'}" class="btn btn-outline" style="flex: 1;">${isOwned ? 'Read Now' : (isSubscribed ? 'Read Now' : 'View')}</a>`
+                }
+                ${isOwned && item.fileUrl && token && isSubscribed
+                  ? `<a href="/api/content/read/${item.id}?token=${encodeURIComponent(token)}&download=1" class="btn btn-outline" style="flex: 0 0 auto;" download title="Download for offline reading">${icon('download')}</a>`
+                  : ''
+                }
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      function getBookIcon(type) {
+        const map = {
+          book: 'bookOpen',
+          video: 'video',
+          audio: 'music',
+          guide: 'file',
+        };
+        return icon(map[type] || 'file');
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      function showError(message) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+        emptyState.querySelector('h3').textContent = 'Error loading library';
+        emptyState.querySelector('p').textContent = message;
+      }
+
+      categoryFilter.addEventListener('change', fetchLibrary);
+      typeFilter.addEventListener('change', fetchLibrary);
+
+      grid.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.purchase-btn');
+        if (!btn) return;
+
+        const card = btn.closest('.book-card');
+        const contentId = card.dataset.id;
+        const priceText = card.querySelector('.book-price')?.textContent || '0';
+        const priceNum = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
+
+        if (!token) {
+          alert('Please log in to purchase books');
+          window.location.href = '/login';
+          return;
+        }
+
+        btn.textContent = 'Processing…';
+        btn.disabled = true;
+
+        try {
+          const res = await fetch('/api/content/purchase', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ contentId, price: priceNum })
+          });
+
+          const data = await res.json();
+
+          if (data.requiresPayment && data.checkoutUrl) {
+            // Wallet could not cover it — hand the browser to PayChangu.
+            window.location.href = data.checkoutUrl;
+            return;
+          }
+
+          if (data.success) {
+            const statusEl = card.querySelector('.book-status');
+            statusEl.innerHTML = `${icon('check')} Owned`;
+            statusEl.className = 'book-status owned';
+
+            const purchaseBtn = card.querySelector('.purchase-btn');
+            if (purchaseBtn) {
+              const newBtn = document.createElement('a');
+              newBtn.href = `/read/${contentId}`;
+              newBtn.className = 'btn btn-outline';
+              newBtn.style.flex = '1';
+              newBtn.textContent = 'Read Now';
+              purchaseBtn.replaceWith(newBtn);
+            }
+            alert('Book purchased successfully!');
+          } else {
+            alert(data.message || 'Purchase failed');
+          }
+        } catch (error) {
+          console.error('Purchase error:', error);
+          alert('Purchase failed. Please try again.');
+        } finally {
+          if (!btn.disabled) {
+            btn.textContent = 'Purchase';
+          }
+        }
+      });
+
+      fetchLibrary();
+    });
+  </script>
+</BaseLayout>
