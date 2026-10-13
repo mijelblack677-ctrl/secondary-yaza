@@ -197,6 +197,12 @@ const gatePrompts = {
             window.location.reload();
             return;
           }
+          // Membership lapsed since the page loaded — show the same prompt the
+          // server would have rendered on arrival.
+          if (data.code && GATE_PROMPTS[data.code]) {
+            document.getElementById('reader-content').innerHTML = GATE_PROMPTS[data.code];
+            return;
+          }
           if (msg) msg.textContent = data.message || 'Could not start the payment. Please try again.';
         } catch (err) {
           if (msg) msg.textContent = 'Network error. Please try again.';

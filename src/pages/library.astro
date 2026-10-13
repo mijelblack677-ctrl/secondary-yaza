@@ -233,6 +233,14 @@ import { icons } from '../lib/icons';
             return;
           }
 
+          // A purchase that is refused for membership reasons gets the same
+          // prompt as everything else, not a bare alert.
+          const purchaseGate = accessGateFromResponse(res.status, data, '/library');
+          if (purchaseGate) {
+            showGate(purchaseGate);
+            return;
+          }
+
           if (data.success) {
             const statusEl = card.querySelector('.book-status');
             statusEl.innerHTML = `${icon('check')} Owned`;

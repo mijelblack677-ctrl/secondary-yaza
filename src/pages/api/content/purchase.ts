@@ -24,8 +24,34 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const authUser = await getAuthUser(request);
 
+    // Buying is a member action like reading — the library only ever offers
+    // the button to members, so the endpoint holds the same line and answers
+    // with the same codes the pages turn into a prompt.
     if (!authUser) {
-      return json({ success: false, message: 'Authentication required' }, 401);
+      return json({
+        success: false,
+        code: 'login_required',
+        message: 'Sign in to buy this title.',
+        redirect: '/login?redirect=/library',
+      }, 401);
+    }
+
+    if (!authUser.isSubscribed || !authUser.subscriptionExpiresAt) {
+      return json({
+        success: false,
+        code: 'subscription_required',
+        message: 'Membership required to buy titles from the collection.',
+        redirect: '/member-access',
+      }, 403);
+    }
+
+    if (authUser.subscriptionExpiresAt < new Date()) {
+      return json({
+        success: false,
+        code: 'subscription_expired',
+        message: 'Your membership has expired. Renew it to keep buying titles.',
+        redirect: '/member-access',
+      }, 403);
     }
 
     const body = await request.json();
