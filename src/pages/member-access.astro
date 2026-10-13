@@ -1,6 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { icons } from '../lib/icons';
+import { getAuthUser } from '@lib/auth';
+import { makeGate, renderAccessGate } from '@lib/accessGate';
+
+// Signed-in only. Decided here so a logged-out visitor gets a way in rather
+// than a failed fetch and a sign-out link.
+const visitor = await getAuthUser(Astro.request);
+const gate = visitor ? null : makeGate('login', '/member-access');
 
 interface Props {
   title: string;
@@ -21,12 +28,14 @@ const { title, description = 'Member Access — read the membership collection' 
       </p>
     </div>
 
-    <div id="loading" class="loading">
-      <div class="spinner"></div>
-      <p class="text-muted">Loading your membership…</p>
-    </div>
+    {gate
+      ? <div set:html={renderAccessGate(gate, { icons, backHref: '/library', backLabel: 'Browse the library' })} />
+      : <div id="loading" class="loading">
+          <div class="spinner"></div>
+          <p class="text-muted">Loading your membership…</p>
+        </div>}
 
-    <div id="member-panel" style="display: none;">
+    <div id="member-panel" style="display: none;" data-gated={gate ? 'true' : 'false'}>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
         <div class="book-card" style="flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden;">
           <div class="book-cover" style="position: relative; aspect-ratio: 3/4; background: linear-gradient(160deg, var(--accent) 0%, var(--surface-2) 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
@@ -145,8 +154,12 @@ const { title, description = 'Member Access — read the membership collection' 
     const ICONS = icons;
     (async () => {
       // Auth is carried by the HttpOnly session cookie; client never reads tokens.
-      const loading = document.getElementById('loading');
       const memberPanel = document.getElementById('member-panel');
+
+      // The server already answered with a sign-in prompt.
+      if (memberPanel && memberPanel.dataset.gated === 'true') return;
+
+      const loading = document.getElementById('loading');
       const memberStatus = document.getElementById('member-status');
       const referralBalance = document.getElementById('referral-balance');
       const referralCount = document.getElementById('referral-count');
@@ -160,12 +173,17 @@ const { title, description = 'Member Access — read the membership collection' 
         const data = await res.json();
 
         if (!data.success) {
+          // A session that ended between the page load and this fetch still
+          // means "sign in again", not "your account is broken".
+          const signedOut = res.status === 401;
           memberPanel.innerHTML = `
             <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px; border: 1px solid var(--line);">
-              <div style="font-size: 2.5rem; margin-bottom: 1rem;">${ICONS.alert}</div>
-              <h2 style="margin-bottom: 0.5rem; font-family: var(--font-serif-display); font-weight: 300;">Unable to load account</h2>
-              <p style="color: var(--ink-60); font-size: 0.9375rem; margin-bottom: 1rem;">${escapeHtml(data.message || 'Please try again.')}</p>
-              <a href="/logout" class="btn-gold">Sign out</a>
+              <div style="font-size: 2.5rem; margin-bottom: 1rem;">${signedOut ? ICONS.lock : ICONS.alert}</div>
+              <h2 style="margin-bottom: 0.5rem; font-family: var(--font-serif-display); font-weight: 300;">${signedOut ? 'Sign in to see your membership' : 'Unable to load account'}</h2>
+              <p style="color: var(--ink-60); font-size: 0.9375rem; margin-bottom: 1rem;">${escapeHtml(signedOut ? 'Use the password for your account to continue.' : (data.message || 'Please try again.'))}</p>
+              ${signedOut
+                ? '<a href="/login?redirect=/member-access" class="btn-gold">Sign in</a>'
+                : '<a href="/logout" class="btn-gold">Sign out</a>'}
             </div>
           `;
           memberPanel.style.display = 'block';

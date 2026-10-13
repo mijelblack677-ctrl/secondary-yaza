@@ -1,6 +1,28 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { icons } from '../../lib/icons';
+import { getAuthUser } from '@lib/auth';
+import { loginHref, makeGate, renderAccessGate, safeNext } from '@lib/accessGate';
+
+// The collection is members-only. Settle it here, on the server, so a visitor
+// who cannot read yet is told how to get in instead of hitting an error after
+// the page has already fetched something.
+const visitor = await getAuthUser(Astro.request);
+const expiresAt = visitor && visitor.subscriptionExpiresAt ? new Date(visitor.subscriptionExpiresAt) : null;
+const isMember = Boolean(visitor && visitor.isSubscribed && expiresAt && expiresAt > new Date());
+const nextPath = safeNext(`/read/${Astro.params.id}`);
+const gate = visitor
+  ? (isMember ? null : makeGate(expiresAt && expiresAt <= new Date() ? 'expired' : 'subscribe', nextPath))
+  : makeGate('login', nextPath);
+
+// The inline script cannot import, so it is handed the same panels the server
+// renders. A membership that lapses mid-read then gets a way in, not an error.
+const gateOptions = { icons, backHref: '/library', backLabel: 'Browse all books' };
+const gatePrompts = {
+  login_required: renderAccessGate(makeGate('login', nextPath), gateOptions),
+  subscription_required: renderAccessGate(makeGate('subscribe', nextPath), gateOptions),
+  subscription_expired: renderAccessGate(makeGate('expired', nextPath), gateOptions),
+};
 ---
 
 <BaseLayout title="Reading" description="Read a title from the Secondary Yaza collection.">
@@ -11,24 +33,29 @@ import { icons } from '../../lib/icons';
         <a href="/library" class="reader-sidebar-link">Browse All Books</a>
         <a href="/" class="reader-sidebar-link">Home</a>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-          <a href="/logout" class="reader-sidebar-link">Sign Out</a>
+          {visitor
+            ? <a href="/logout" class="reader-sidebar-link">Sign Out</a>
+            : <a href={loginHref(nextPath)} class="reader-sidebar-link">Sign In</a>}
         </div>
       </div>
       <div id="reader-nav" style="font-family: var(--font-sans); font-size: 13px;">
-        <p style="color: rgba(255,255,255,0.4); font-size: 12px;">Loading…</p>
+        <p style="color: rgba(255,255,255,0.4); font-size: 12px;">{gate ? 'Members only' : 'Loading…'}</p>
       </div>
     </aside>
 
-    <main class="reader-content" id="reader-content">
-      <div id="loading" class="loading">
-        <div class="spinner"></div>
-        <p class="text-muted">Loading book…</p>
-      </div>
+    <main class="reader-content" id="reader-content" data-gated={gate ? 'true' : 'false'}>
+      {gate
+        ? <div set:html={renderAccessGate(gate, { icons, backHref: '/library', backLabel: 'Browse all books' })} />
+        : <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p class="text-muted">Loading book…</p>
+          </div>}
     </main>
   </div>
 
-  <script is:inline define:vars={{ icons }}>
+  <script is:inline define:vars={{ icons, gatePrompts }}>
     const ICONS = icons;
+    const GATE_PROMPTS = gatePrompts;
 
     // Client-side icon lookup with safe fallback (fixes "icon is not defined")
     function icon(name) {
@@ -39,8 +66,12 @@ import { icons } from '../../lib/icons';
       const urlParams = new URLSearchParams(window.location.search);
       const bookId = urlParams.get('id') || document.location.pathname.split('/').pop();
 
-      const loading = document.getElementById('loading');
       const readerContent = document.getElementById('reader-content');
+
+      // The server already answered with a sign-in or join prompt.
+      if (readerContent && readerContent.dataset.gated === 'true') return;
+
+      const loading = document.getElementById('loading');
 
       if (!bookId) {
         readerContent.innerHTML = emptyState('bookOpen', 'Book Not Found', "The book you're looking for doesn't exist.");
@@ -59,13 +90,20 @@ import { icons } from '../../lib/icons';
         const metaData = await metaRes.json().catch(() => ({ success: false, message: 'Unreadable response from server' }));
 
         if (!metaData.success) {
+          // Membership gate rather than a failure — show the prompt the server
+          // prepared, so an expired session never reads as a broken book.
+          if (metaData.code && GATE_PROMPTS[metaData.code]) {
+            if (loading) loading.style.display = 'none';
+            readerContent.innerHTML = GATE_PROMPTS[metaData.code];
+            return;
+          }
           // Premium book the reader has not paid for — offer the paywall here
           // too, so landing on this page directly is not a dead end.
           if (metaData.requiresPurchase) {
             renderPaywall(metaData);
             return;
           }
-          readerContent.innerHTML = emptyState('alert', metaData.message || 'Error', 'Unable to load this book.');
+          readerContent.innerHTML = emptyState('alert', metaData.title || 'Unavailable', metaData.message || 'This title could not be opened right now.');
           return;
         }
 

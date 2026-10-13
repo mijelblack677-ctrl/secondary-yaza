@@ -12,18 +12,44 @@ export const GET: APIRoute = async ({ request }) => {
     const authUser = await getAuthUser(request);
 
     // Subscriber-only: only an authenticated, active subscriber may see the
-    // library. Everyone else gets a 401 with a redirect hint to /login.
-    if (!authUser || !authUser.isSubscribed || !authUser.subscriptionExpiresAt) {
+    // library. Being signed out and being a non-member are different problems,
+    // so each carries its own code and its own place to go and fix it.
+    if (!authUser) {
       return new Response(
-        JSON.stringify({ success: false, isAuthenticated: false, message: 'Login required', redirect: '/login' }),
+        JSON.stringify({
+          success: false,
+          isAuthenticated: false,
+          code: 'login_required',
+          message: 'Sign in to browse the membership collection.',
+          redirect: '/login?redirect=/library',
+        }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     const now = new Date();
+    if (!authUser.isSubscribed || !authUser.subscriptionExpiresAt) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          isAuthenticated: true,
+          code: 'subscription_required',
+          message: 'Membership required. Join for MWK 2,000 to unlock the collection.',
+          redirect: '/member-access',
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (authUser.subscriptionExpiresAt < now) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Subscription expired' }),
+        JSON.stringify({
+          success: false,
+          isAuthenticated: true,
+          code: 'subscription_expired',
+          message: 'Your membership has expired. Renew for MWK 2,000 to keep reading.',
+          redirect: '/member-access',
+        }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }

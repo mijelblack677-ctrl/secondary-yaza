@@ -37,19 +37,35 @@ export const GET: APIRoute = async ({ params, request, url }) => {
         ? await getUserFromSession(url.searchParams.get('token') || undefined)
         : null);
 
+    // The reader page turns these codes into a join prompt, so a visitor who
+    // cannot read yet is told how to get in rather than shown an error.
     if (!authUser) {
-      return json({ success: false, message: 'Login required' }, 401);
+      return json({
+        success: false,
+        code: 'login_required',
+        message: 'Sign in to read this title.',
+        redirect: `/login?redirect=${encodeURIComponent(`/read/${id}`)}`,
+      }, 401);
     }
 
-    // Subscriber-only: only an authenticated, active subscriber may open a
-    // book. Everyone else gets 403. The same rule is enforced client-side in
-    // library.astro, but the server is the one that actually protects the file.
+    // Subscriber-only: an active membership, not merely a session. The same
+    // rule is enforced in the reader page, but this is what protects the file.
     const now = new Date();
     if (!authUser.isSubscribed || !authUser.subscriptionExpiresAt) {
-      return json({ success: false, message: 'Login required' }, 401);
+      return json({
+        success: false,
+        code: 'subscription_required',
+        message: 'Membership required to read this title.',
+        redirect: '/member-access',
+      }, 403);
     }
     if (authUser.subscriptionExpiresAt < now) {
-      return json({ success: false, message: 'Subscription expired' }, 403);
+      return json({
+        success: false,
+        code: 'subscription_expired',
+        message: 'Your membership has expired.',
+        redirect: '/member-access',
+      }, 403);
     }
 
     const items = await db

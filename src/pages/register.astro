@@ -75,6 +75,8 @@ import BaseLayoutNoHeader from '../layouts/BaseLayoutNoHeader.astro';
   </div>
 
   <script>
+    import { safeNext } from '../lib/accessGate';
+
     const registerForm = document.getElementById('register-form');
     const policiesCheck = document.getElementById('policies-check');
     const formError = document.getElementById('form-error');
@@ -149,8 +151,9 @@ import BaseLayoutNoHeader from '../layouts/BaseLayoutNoHeader.astro';
           if (data.success) {
             if (data.activated) {
               // An earlier payment had already completed — account activated
-              // and the HttpOnly session cookie was set server-side.
-              window.location.href = data.redirectTo || '/library';
+              // and the HttpOnly session cookie was set server-side. Return
+              // them to whatever they were trying to open before signing up.
+              window.location.href = data.redirectTo || safeNext(params.get('redirect'));
             } else if (data.checkoutUrl) {
               // The account is staged but inactive until PayChangu confirms the fee.
               window.location.href = data.checkoutUrl;

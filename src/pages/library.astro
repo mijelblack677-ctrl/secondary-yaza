@@ -13,7 +13,7 @@ import { icons } from '../lib/icons';
       </p>
     </div>
 
-    <div style="display: flex; gap: 0.75rem; margin-bottom: 1.75rem; flex-wrap: wrap; justify-content: center;">
+    <div id="library-filters" style="display: flex; gap: 0.75rem; margin-bottom: 1.75rem; flex-wrap: wrap; justify-content: center;">
       <select id="category-filter" class="form-input" style="flex: 0 1 240px; min-width: 180px;">
         <option value="all">All Categories</option>
       </select>
@@ -38,14 +38,12 @@ import { icons } from '../lib/icons';
       <p>Try adjusting your filters or check back later for new content.</p>
     </div>
 
-    <div id="subscribe-msg" style="display: none; margin-top: 2rem; padding: 1rem 1.25rem; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--line); text-align: center;">
-      <p style="margin: 0 0 0.4rem;">To borrow and read books you must be a subscriber.</p>
-      <a href="/login?redirect=/library" class="btn" style="text-decoration: none;">Sign in</a>
-    </div>
+    <div id="library-gate" style="display: none;"></div>
   </section>
 
   <script>
-    import { icon } from '../lib/icons';
+    import { icon, icons } from '../lib/icons';
+    import { accessGateFromResponse, joinHref, loginHref, renderAccessGate } from '../lib/accessGate';
 
     document.addEventListener('DOMContentLoaded', async () => {
       const grid = document.getElementById<HTMLDivElement>('library-grid');
@@ -53,7 +51,8 @@ import { icons } from '../lib/icons';
       const emptyState = document.getElementById<HTMLDivElement>('empty-state');
       const categoryFilter = document.getElementById<HTMLSelectElement>('category-filter');
       const typeFilter = document.getElementById<HTMLSelectElement>('type-filter');
-      const subscribeMsg = document.getElementById<HTMLDivElement>('subscribe-msg');
+      const gateBox = document.getElementById<HTMLDivElement>('library-gate');
+      const filters = document.getElementById<HTMLDivElement>('library-filters');
 
       // Auth is carried by the HttpOnly session cookie (credentials: 'same-origin').
       // The client never reads the token — it was removed from JS-reachable storage.
@@ -63,7 +62,7 @@ import { icons } from '../lib/icons';
         loading.style.display = 'flex';
         grid.style.display = 'none';
         emptyState.style.display = 'none';
-        subscribeMsg.style.display = 'none';
+        gateBox.style.display = 'none';
 
         try {
           const params = new URLSearchParams({
@@ -73,14 +72,23 @@ import { icons } from '../lib/icons';
 
 
           const res = await fetch(`/api/content/library?${params}`, { credentials: 'same-origin' });
-          const data = await res.json();
+          const data = await res.json().catch(() => null);
 
-          if (data.success) {
+          if (data && data.success) {
             isAuthenticated = Boolean(data.isAuthenticated);
             renderLibrary(data.items, data.categories, data.isSubscribed);
-          } else {
-            showError('Failed to load library');
+            return;
           }
+
+          // Membership is a gate, not a failure: tell the visitor which door to
+          // use instead of reporting that the library would not load.
+          const gate = accessGateFromResponse(res.status, data, '/library');
+          if (gate) {
+            showGate(gate);
+            return;
+          }
+
+          showError((data && data.message) || 'We could not load the library just now.');
         } catch (error) {
           console.error('Error:', error);
           showError('Connection error');
@@ -170,6 +178,15 @@ import { icons } from '../lib/icons';
         return div.innerHTML;
       }
 
+      function showGate(gate) {
+        filters.style.display = 'none';
+        grid.style.display = 'none';
+        emptyState.style.display = 'none';
+        loading.style.display = 'none';
+        gateBox.innerHTML = renderAccessGate(gate, { icons });
+        gateBox.style.display = 'block';
+      }
+
       function showError(message: string) {
         grid.style.display = 'none';
         emptyState.style.display = 'block';
@@ -190,8 +207,8 @@ import { icons } from '../lib/icons';
         const priceNum = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
 
         if (!isAuthenticated) {
-          alert('Please log in to purchase books');
-          window.location.href = '/login';
+          // Session ended since the page loaded — sign in and come back.
+          window.location.href = loginHref('/library');
           return;
         }
 
