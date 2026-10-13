@@ -43,6 +43,7 @@ async function initDatabase() {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by UUID REFERENCES users(id) ON DELETE SET NULL`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_subscribed BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP WITH TIME ZONE`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS payout_phone VARCHAR(50)`);
     console.log('✅ Users table created');
 
     // Wallets table
@@ -198,6 +199,33 @@ async function initDatabase() {
     `);
     console.log('✅ Payments table created');
 
+    // Payouts table: one row per member withdrawal sent over mobile money.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS payouts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        wallet_id UUID REFERENCES wallets(id) ON DELETE SET NULL,
+        charge_id VARCHAR(255) UNIQUE NOT NULL,
+        gross_amount DECIMAL(12,2) NOT NULL,
+        fee_amount DECIMAL(12,2) NOT NULL,
+        net_amount DECIMAL(12,2) NOT NULL,
+        currency VARCHAR(10) DEFAULT 'MWK',
+        phone VARCHAR(50) NOT NULL,
+        operator_ref_id VARCHAR(100),
+        operator_name VARCHAR(100),
+        status VARCHAR(30) NOT NULL DEFAULT 'pending',
+        gateway_ref_id VARCHAR(255),
+        gateway_trans_id VARCHAR(255),
+        failure_reason TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        completed_at TIMESTAMP WITH TIME ZONE
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS payouts_user_id_idx ON payouts (user_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS payouts_status_idx ON payouts (status)`);
+    console.log('✅ Payouts table created');
+
     // Notifications table
     await client.query(`
       CREATE TABLE IF NOT EXISTS notifications (
@@ -263,6 +291,7 @@ async function initDatabase() {
     console.log('   - notifications');
     console.log('   - referral_claims');
     console.log('   - payments');
+    console.log('   - payouts');
 
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

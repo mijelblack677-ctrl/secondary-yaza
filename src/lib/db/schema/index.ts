@@ -5,6 +5,8 @@ export const users = pgTable('users', {
   fullName: varchar('full_name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).unique().notNull(),
   phone: varchar('phone', { length: 50 }).unique().notNull(),
+  // Where withdrawals are paid out. Null means "the number on the account".
+  payoutPhone: varchar('payout_phone', { length: 50 }),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   referralCode: varchar('referral_code', { length: 50 }).unique().notNull(),
   isAdmin: boolean('is_admin').default(false),
@@ -136,6 +138,31 @@ export const referralClaims = pgTable('referral_claims', {
   amount: decimal('amount', { precision: 12, scale: 2 }).notNull(), // 500
   description: varchar('description', { length: 255 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+/** One row per member withdrawal paid out over mobile money.
+ *  status: 'pending' -> 'success' | 'reversed' (gateway refused, funds returned).
+ *  charge_id is ours and is unique, so the gateway can never pay a request twice. */
+export const payouts = pgTable('payouts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull(),
+  walletId: uuid('wallet_id'),
+  chargeId: varchar('charge_id', { length: 255 }).unique().notNull(),
+  // What the member asked for, what we kept, and what actually left the account.
+  grossAmount: decimal('gross_amount', { precision: 12, scale: 2 }).notNull(),
+  feeAmount: decimal('fee_amount', { precision: 12, scale: 2 }).notNull(),
+  netAmount: decimal('net_amount', { precision: 12, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 10 }).default('MWK'),
+  phone: varchar('phone', { length: 50 }).notNull(),
+  operatorRefId: varchar('operator_ref_id', { length: 100 }),
+  operatorName: varchar('operator_name', { length: 100 }),
+  status: varchar('status', { length: 30 }).default('pending'),
+  gatewayRefId: varchar('gateway_ref_id', { length: 255 }),
+  gatewayTransId: varchar('gateway_trans_id', { length: 255 }),
+  failureReason: text('failure_reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
 });
 
 export const notifications = pgTable('notifications', {

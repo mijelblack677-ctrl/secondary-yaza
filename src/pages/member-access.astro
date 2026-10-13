@@ -79,20 +79,65 @@ const { title, description = 'Member Access — read the membership collection' 
         <p class="auth-error" id="join-error" hidden style="background: rgba(185, 28, 28, 0.08); color: var(--danger); border: 1px solid rgba(185, 28, 28, 0.2); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; font-family: var(--font-sans); font-size: 13px; margin-top: 1rem;"></p>
       </div>
 
+      <div id="payout-card" style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.75rem; margin-bottom: 1.75rem;">
+        <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">Payout number</h2>
+        <p class="text-muted" style="font-size: 14px; margin: 0 0 0.9rem;">
+          Withdrawals are sent to your mobile money wallet. Changing the number needs your password.
+        </p>
+        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+          <span style="font-family: var(--font-sans); font-size: 15px; font-weight: 600; color: var(--ink);" id="payout-current">—</span>
+          <span id="payout-operator" style="font-family: var(--font-sans); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.2rem 0.5rem; border-radius: var(--radius-pill); background: var(--surface-2); color: var(--ink-60);"></span>
+        </div>
+        <details id="payout-edit" style="margin-top: 0.75rem;">
+          <summary style="cursor: pointer; font-family: var(--font-sans); font-size: 13px; color: var(--ink-60);">Change payout number</summary>
+          <form id="payout-form" style="display: flex; flex-direction: column; gap: 0.85rem; margin-top: 1rem;">
+            <div class="auth-field" style="display: flex; flex-direction: column; gap: 0.4rem;">
+              <label for="payout-phone" style="font-family: var(--font-sans); font-size: 12px; font-weight: 500; letter-spacing: 0.06em; color: var(--ink);">Mobile money number</label>
+              <input type="tel" id="payout-phone" autocomplete="tel" placeholder="0991234567" style="font-family: var(--font-sans); font-size: 16px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 0.75rem 0.85rem;" />
+              <div class="auth-hint">Airtel Money (098 / 099) or TNM Mpamba (088 / 089).</div>
+            </div>
+            <div class="auth-field" style="display: flex; flex-direction: column; gap: 0.4rem;">
+              <label for="payout-password" style="font-family: var(--font-sans); font-size: 12px; font-weight: 500; letter-spacing: 0.06em; color: var(--ink);">Confirm with your password</label>
+              <input type="password" id="payout-password" autocomplete="current-password" placeholder="Your account password" style="font-family: var(--font-sans); font-size: 16px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 0.75rem 0.85rem;" />
+            </div>
+            <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+              <button type="submit" class="auth-submit" id="payout-save" style="max-width: 230px; margin: 0;">Save payout number</button>
+              <button type="button" class="btn-gold" id="payout-reset">Use my account number</button>
+            </div>
+            <p class="auth-error" id="payout-error" hidden style="background: rgba(185, 28, 28, 0.08); color: var(--danger); border: 1px solid rgba(185, 28, 28, 0.2); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; font-family: var(--font-sans); font-size: 13px;"></p>
+            <p id="payout-status" style="font-size: 13px; color: var(--success); display: none;"></p>
+          </form>
+        </details>
+      </div>
+
       <form id="withdraw-form" style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.75rem; display: flex; flex-direction: column; gap: 1.05rem;">
         <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">Withdraw your earnings</h2>
         <p class="text-muted" style="font-size: 14px; margin: 0 0 1rem;">
-          Withdrawals are paid to your wallet. Earn MWK 500 per invited registrant and MWK 500 per book your invitee buys — withdraw anytime.
+          Earn MWK 500 per invited registrant and MWK 500 per book your invitee buys — withdraw to mobile money anytime.
+          A <strong><span id="fee-rate">16</span>% fee</strong> is deducted from the amount you request.
         </p>
         <div class="auth-field" style="display: flex; flex-direction: column; gap: 0.4rem;">
           <label for="withdraw-amount" style="font-family: var(--font-sans); font-size: 12px; font-weight: 500; letter-spacing: 0.06em; color: var(--ink);">Amount to withdraw (MWK)</label>
           <input type="number" id="withdraw-amount" min="500" step="500" placeholder="e.g. 500" autocomplete="off" style="font-family: var(--font-sans); font-size: 16px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 0.75rem 0.85rem;" />
         </div>
+        <div id="withdraw-breakdown" style="display: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.85rem 0.95rem; font-family: var(--font-sans); font-size: 13px; color: var(--ink-60);">
+          <div style="display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.35rem;"><span>You request</span><span id="bd-gross" style="color: var(--ink); font-weight: 600;">MWK 0</span></div>
+          <div style="display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.35rem;"><span>Withdrawal fee (<span id="bd-rate">16</span>%)</span><span id="bd-fee" style="color: var(--ink); font-weight: 600;">MWK 0</span></div>
+          <div style="display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--line); padding-top: 0.4rem;"><span style="color: var(--ink); font-weight: 600;">Sending to your phone</span><span id="bd-net" style="color: var(--ink); font-weight: 700;">MWK 0</span></div>
+        </div>
+        <div class="auth-field" style="display: flex; flex-direction: column; gap: 0.4rem;">
+          <label for="withdraw-password" style="font-family: var(--font-sans); font-size: 12px; font-weight: 500; letter-spacing: 0.06em; color: var(--ink);">Confirm with your password</label>
+          <input type="password" id="withdraw-password" autocomplete="current-password" placeholder="Your account password" style="font-family: var(--font-sans); font-size: 16px; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 0.75rem 0.85rem;" />
+        </div>
         <button type="submit" class="auth-submit" id="withdraw-btn">Withdraw MWK</button>
         <p class="auth-error" id="withdraw-error" hidden style="background: rgba(185, 28, 28, 0.08); color: var(--danger); border: 1px solid rgba(185, 28, 28, 0.2); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; font-family: var(--font-sans); font-size: 13px;"></p>
+        <p id="withdraw-status" style="font-size: 13px; color: var(--success); display: none;"></p>
       </form>
 
-      <div id="withdraw-status" style="font-size: 13px; color: var(--success); display: none;"></div>
+      <div id="payout-history-wrap" style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.75rem; margin-top: 1.75rem;">
+        <h2 style="font-size: 1.25rem; margin-bottom: 0.75rem;">Recent withdrawals</h2>
+        <div id="payout-history"><p class="text-muted" style="font-size: 13.5px;">No withdrawals yet.</p></div>
+      </div>
     </div>
   </section>
 
@@ -237,15 +282,164 @@ const { title, description = 'Member Access — read the membership collection' 
           });
         }
 
+        // ---- Withdrawals: fee schedule, payout number, history ----
+        const payoutForm = document.getElementById('payout-form');
+        const payoutError = document.getElementById('payout-error');
+        const payoutStatus = document.getElementById('payout-status');
+        const amountInput = document.getElementById('withdraw-amount');
+        const breakdownBox = document.getElementById('withdraw-breakdown');
+        const historyBox = document.getElementById('payout-history');
+
+        let withdrawConfig = { feeRate: 0.16, feePercent: 16, minWithdrawal: 500, step: 500 };
+
+        const money = (n) => 'MWK ' + (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+        const payoutTone = (status) => {
+          if (status === 'success') return { bg: 'rgba(47, 122, 77, 0.12)', fg: 'var(--success)', label: 'Sent' };
+          if (status === 'reversed') return { bg: 'rgba(185, 28, 28, 0.10)', fg: 'var(--danger)', label: 'Refunded' };
+          return { bg: 'var(--surface-2)', fg: 'var(--ink-60)', label: 'Processing' };
+        };
+
+        function renderBreakdown() {
+          if (!breakdownBox || !amountInput) return;
+          const amount = parseInt(amountInput.value || '0', 10) || 0;
+          if (!amount) { breakdownBox.style.display = 'none'; return; }
+          const fee = Math.round(amount * withdrawConfig.feeRate * 100) / 100;
+          const net = Math.round((amount - fee) * 100) / 100;
+          document.getElementById('bd-gross').textContent = money(amount);
+          document.getElementById('bd-fee').textContent = money(fee);
+          document.getElementById('bd-net').textContent = money(net);
+          breakdownBox.style.display = 'block';
+        }
+
+        function renderHistory(list) {
+          if (!historyBox) return;
+          if (!list || list.length === 0) {
+            historyBox.innerHTML = '<p class="text-muted" style="font-size: 13.5px;">No withdrawals yet.</p>';
+            return;
+          }
+          historyBox.innerHTML = list.map((row) => {
+            const tone = payoutTone(row.status);
+            const when = row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '';
+            const note = row.status === 'reversed'
+              ? '<p style="font-size: 12px; color: var(--ink-40); margin-top: 0.3rem;">Returned to your wallet' + (row.failureReason ? ': ' + escapeHtml(row.failureReason) : '') + '</p>'
+              : '';
+            return '<div style="display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; padding: 0.85rem 0; border-bottom: 1px solid var(--line);">'
+              + '<div>'
+              + '<p style="font-family: var(--font-sans); font-size: 14px; font-weight: 600; color: var(--ink);">' + money(row.netAmount) + '</p>'
+              + '<p style="font-size: 12.5px; color: var(--ink-40);">' + (row.operatorName ? escapeHtml(row.operatorName) + ' · ' : '') + escapeHtml(row.phone || '') + ' · ' + when + '</p>'
+              + '<p style="font-size: 12px; color: var(--ink-40);">Requested ' + money(row.grossAmount) + ', fee ' + money(row.feeAmount) + '</p>'
+              + note
+              + '</div>'
+              + '<span style="font-family: var(--font-sans); font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.25rem 0.55rem; border-radius: var(--radius-pill); background: ' + tone.bg + '; color: ' + tone.fg + '; white-space: nowrap;">' + tone.label + '</span>'
+              + '</div>';
+          }).join('');
+        }
+
+        async function loadPayouts() {
+          try {
+            const res = await fetch('/api/auth/payouts', { credentials: 'same-origin' });
+            const data = await res.json();
+            if (!data.success) return;
+
+            withdrawConfig = {
+              feeRate: data.feeRate ?? 0.16,
+              feePercent: data.feePercent ?? 16,
+              minWithdrawal: data.minWithdrawal ?? 500,
+              step: data.step ?? 500
+            };
+
+            const rateEl = document.getElementById('fee-rate');
+            const rateBd = document.getElementById('bd-rate');
+            if (rateEl) rateEl.textContent = String(withdrawConfig.feePercent);
+            if (rateBd) rateBd.textContent = String(withdrawConfig.feePercent);
+            if (amountInput) {
+              amountInput.min = String(withdrawConfig.minWithdrawal);
+              amountInput.step = String(withdrawConfig.step);
+            }
+
+            const current = document.getElementById('payout-current');
+            const operatorEl = document.getElementById('payout-operator');
+            if (current) current.textContent = data.effectivePhone ? data.effectivePhone : 'Not set';
+            if (operatorEl) operatorEl.textContent = data.operator || (data.payoutPhone ? '' : 'Account number');
+
+            renderHistory(data.payouts || []);
+          } catch (err) {
+            console.warn('Could not load payouts:', err);
+          }
+        }
+
+        if (amountInput) amountInput.addEventListener('input', renderBreakdown);
+
+        async function savePayoutNumber(body, okText) {
+          payoutError.hidden = true;
+          payoutStatus.style.display = 'none';
+          const saveBtn = document.getElementById('payout-save');
+          if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+          try {
+            const res = await fetch('/api/auth/payout-phone', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            const result = await res.json();
+            if (result.success) {
+              payoutStatus.textContent = result.message || okText;
+              payoutStatus.style.display = 'block';
+              payoutForm?.reset();
+              await loadPayouts();
+              return true;
+            }
+            payoutError.textContent = result.message || 'Could not save your payout number';
+            payoutError.hidden = false;
+            return false;
+          } catch (err) {
+            payoutError.textContent = 'Network error. Please try again.';
+            payoutError.hidden = false;
+            return false;
+          } finally {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save payout number'; }
+          }
+        }
+
+        if (payoutForm) {
+          payoutForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await savePayoutNumber({
+              phone: document.getElementById('payout-phone')?.value || '',
+              password: document.getElementById('payout-password')?.value || ''
+            }, 'Payout number saved');
+          });
+        }
+
+        document.getElementById('payout-reset')?.addEventListener('click', async () => {
+          const password = document.getElementById('payout-password')?.value || '';
+          if (!password) {
+            payoutError.textContent = 'Enter your password to confirm.';
+            payoutError.hidden = false;
+            return;
+          }
+          await savePayoutNumber({ reset: true, password }, 'Using your account number');
+        });
+
         if (withdrawForm) {
           withdrawForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             withdrawError.hidden = true;
             withdrawStatus.style.display = 'none';
 
-            const amount = parseInt(document.getElementById('withdraw-amount')?.value || '0', 10);
-            if (!amount || amount < 500 || amount % 500 !== 0) {
-              withdrawError.textContent = 'Enter a valid amount (MWK 500 minimum, in 500 steps).';
+            const amount = parseInt(amountInput?.value || '0', 10);
+            const password = document.getElementById('withdraw-password')?.value || '';
+            const { minWithdrawal, step } = withdrawConfig;
+
+            if (!amount || amount < minWithdrawal || amount % step !== 0) {
+              withdrawError.textContent = 'Enter a valid amount (MWK ' + minWithdrawal + ' minimum, in ' + step + ' steps).';
+              withdrawError.hidden = false;
+              return;
+            }
+            if (!password) {
+              withdrawError.textContent = 'Enter your password to confirm the withdrawal.';
               withdrawError.hidden = false;
               return;
             }
@@ -258,13 +452,15 @@ const { title, description = 'Member Access — read the membership collection' 
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount })
+                body: JSON.stringify({ amount, password })
               });
               const result = await res.json();
               if (result.success) {
                 withdrawStatus.textContent = result.message;
                 withdrawStatus.style.display = 'block';
                 withdrawForm.reset();
+                renderBreakdown();
+                await loadPayouts();
               } else {
                 withdrawError.textContent = result.message || 'Withdrawal failed';
                 withdrawError.hidden = false;
@@ -278,6 +474,8 @@ const { title, description = 'Member Access — read the membership collection' 
             }
           });
         }
+
+        await loadPayouts();
       } catch (error) {
         console.error('Member access load error:', error);
         loading.style.display = 'none';
